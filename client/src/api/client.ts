@@ -25,7 +25,7 @@ import { useSessionStore } from '@/store/sessionStore'
  * browser bundle, preventing accidental leakage of server secrets.
  * Falls back to localhost so the app works without a .env file locally.
  */
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const BASE_URL = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 // ── Error type ────────────────────────────────────────────────────────────────
 
