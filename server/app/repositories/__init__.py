@@ -12,3 +12,9 @@ Repositories receive and return typed Python objects (Pydantic models or plain
 dataclasses), never raw MongoDB dicts.  Callers should not need to know whether
 the data came from a simple find() or a ten-stage aggregation.
 """
+
+from app.repositories.user_repository import UserRepository
+
+__all__ = [
+    "UserRepository",
+]

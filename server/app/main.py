@@ -84,10 +84,12 @@ def create_app() -> FastAPI:
     )
 
     # ── Routers ───────────────────────────────────────────────────────────────
-    # Routers are registered here as each phase is built.  Importing them at
-    # the top of this file would cause circular imports, so they are imported
-    # inline inside create_app().
-    # (No routers yet — added in Phase 2 and beyond.)
+    # Routers are registered here as each phase is built.
+    from app.api.users import router as users_router
+    from app.api.auth import router as auth_router
+
+    application.include_router(users_router, prefix="/api")
+    application.include_router(auth_router, prefix="/api")
 
     return application
 

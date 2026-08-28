@@ -5,8 +5,17 @@ Every HTTP request body and response body in this project is typed with a
 Pydantic model defined here.  Using `dict` as a passthrough is explicitly
 forbidden — it bypasses validation and makes the API surface invisible.
 
-Schemas are separated from models/ (which represent MongoDB document shapes)
+Schemata are separated from models/ (which represent MongoDB document shapes)
 because the two concerns evolve independently:  a document might store a
 hashed secret that should never appear in a response, or a request might
 accept fields that get computed before storage.
 """
+
+from app.schemas.user import UserResponse
+from app.schemas.auth import LoginRequest, TokenResponse
+
+__all__ = [
+    "UserResponse",
+    "LoginRequest",
+    "TokenResponse",
+]

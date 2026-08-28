@@ -6,3 +6,11 @@ scoring, access-control checks, etc.  They sit between routers and repositories:
 routers call services; services call repositories.  Services must never build
 Motor queries or aggregation pipelines directly — that belongs in repositories/.
 """
+
+from app.services.user_service import UserService
+from app.services.auth_service import AuthService
+
+__all__ = [
+    "UserService",
+    "AuthService",
+]
