@@ -20,10 +20,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Path aliases — keeps imports clean as the project grows */
-    "baseUrl": ".",
+    /* Path aliases — keeps imports clean as the project grows.
+       No baseUrl needed: TS 5+ with moduleResolution "bundler" supports
+       paths without baseUrl. Paths are relative to this tsconfig file. */
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]
