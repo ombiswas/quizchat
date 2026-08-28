@@ -11,7 +11,11 @@ from app.models.user import User
 from app.repositories.chapter_repository import ChapterRepository
 from app.repositories.question_repository import QuestionRepository
 from app.repositories.quiz_repository import QuizRepository
-from app.schemas.quiz import CreateQuizRequest, QuizStartResponse
+from app.schemas.quiz import (
+    ClientQuestionResponse,
+    CreateQuizRequest,
+    QuizStartResponse,
+)
 from app.services.quiz_service import QuizService
 
 router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
@@ -41,4 +45,24 @@ async def create_quiz(
     return await service.create_quiz(
         user_id=current_user.id,
         chapter_id=request.chapter_id,
+    )
+
+
+@router.get(
+    "/{quiz_id}/current-question",
+    response_model=ClientQuestionResponse,
+    summary="Get current active question in quiz",
+    description=(
+        "Returns the question corresponding to current_index in the active quiz session. "
+        "Guarantees that users cannot revisit earlier questions or skip ahead."
+    ),
+)
+async def get_current_question(
+    quiz_id: str,
+    current_user: User = Depends(get_current_user),
+    service: QuizService = Depends(get_quiz_service),
+) -> ClientQuestionResponse:
+    return await service.get_current_question(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
     )

@@ -106,3 +106,70 @@ class QuizService:
             total_questions=len(questions),
             question=client_first_question,
         )
+
+    async def get_current_question(
+        self,
+        user_id: str | ObjectId,
+        quiz_id: str,
+    ) -> ClientQuestionResponse:
+        """
+        Fetch the current (and only servable) question for an active quiz session.
+
+        Server-Side Integrity & "Cannot Revisit" Enforcement:
+        ----------------------------------------------------
+        1. Authentication & Ownership: We verify that `quiz.user_id` matches the calling user.
+           Other users receive 403 Forbidden.
+        2. Session Status: If the quiz is marked "completed", we reject with 409 Conflict.
+           Users cannot replay a finished quiz thread.
+        3. Index Enforcement: The API strictly serves `quiz.question_ids[quiz.current_index]`.
+           Clients cannot pass arbitrary question IDs or request past indices. The pointer
+           `current_index` is strictly managed and advanced on the server during submit.
+        4. Display Timing: If `current_question_shown_at` is uninitialized (e.g. after advancing
+           to the next index or upon first retrieval), we stamp the current server time `now`.
+           This guarantees that the response duration measured on submit is computed accurately
+           from when the question was genuinely made available to the client.
+        5. Secret Protection: The returned ClientQuestionResponse omits `correct_option`.
+        """
+        # 1. Validate quiz exists
+        quiz = await self.quiz_repo.get_by_id(quiz_id)
+        if not quiz:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Quiz with id '{quiz_id}' not found.",
+            )
+
+        # 2. Ownership check
+        req_user_id_str = str(user_id)
+        quiz_user_id_str = str(quiz.user_id)
+        if req_user_id_str != quiz_user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to access this quiz.",
+            )
+
+        # 3. Status check
+        if quiz.status != "in_progress" or quiz.current_index >= len(quiz.question_ids):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Quiz has already been completed.",
+            )
+
+        # 4. Fetch the current question by the server-controlled current_index
+        current_question_id = quiz.question_ids[quiz.current_index]
+        question = await self.question_repo.get_by_id(current_question_id)
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Question with id '{current_question_id}' not found.",
+            )
+
+        # 5. Stamp / refresh question_shown_at if not already stamped
+        if quiz.current_question_shown_at is None:
+            now = datetime.now(timezone.utc)
+            await self.quiz_repo.update_shown_time(quiz.id, now)
+
+        return ClientQuestionResponse.from_model(
+            question=question,
+            question_index=quiz.current_index,
+            total_questions=len(quiz.question_ids),
+        )
