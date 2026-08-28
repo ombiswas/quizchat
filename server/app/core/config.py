@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     seed_num_questions: int = Field(default=500)
     seed_questions_per_quiz: int = Field(default=15)
 
+    @property
+    def cors_origins(self) -> list[str]:
+        """
+        Parse frontend_origin into a list of origins (supports comma-separated production origins).
+        """
+        if not self.frontend_origin:
+            return ["http://localhost:5173"]
+        return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

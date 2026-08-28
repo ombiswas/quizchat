@@ -77,7 +77,7 @@ def create_app() -> FastAPI:
     # In production, replace allow_origins with the exact deployed frontend URL.
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.frontend_origin],
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
