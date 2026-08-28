@@ -1,0 +1,54 @@
+# ── Docs (internal planning files, not for the repo) ──────────────────────────
+/docs
+
+# ── Environment files ─────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+client/node_modules/
+dist/
+client/dist/
+.vite/
+*.local
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
