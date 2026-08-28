@@ -12,7 +12,7 @@ export default {
   theme: {
     extend: {
       // ── Custom color palette ───────────────────────────────────────────────
-      // Deep ink canvas with high-contrast surfaces and deliberate accent hue.
+      // Deep ink canvas with high-contrast surfaces and Oceanic Cyan accent.
       colors: {
         ink: {
           950: '#08090c',   // Deepest canvas / background
@@ -26,28 +26,12 @@ export default {
           200: '#d0d5e5',   // Subtitle text
           100: '#f1f3f9',   // High-contrast primary text
         },
-        // Option 1 Default: Solar Amber (Rich, warm, scholarly)
+        // Primary Accent: Oceanic Cyan (Crisp, sharp, luminous)
         accent: {
-          DEFAULT: '#f59e0b',
-          light:   '#fbbf24',
-          dark:    '#b45309',
-          glow:    'rgba(245, 158, 11, 0.25)',
-          subtle:  'rgba(245, 158, 11, 0.12)',
-        },
-        // Electric Indigo Option
-        indigoAccent: {
-          DEFAULT: '#6366f1',
-          light:   '#818cf8',
-          dark:    '#4338ca',
-          glow:    'rgba(99, 102, 241, 0.25)',
-          subtle:  'rgba(99, 102, 241, 0.12)',
-        },
-        // Oceanic Cyan Option
-        cyanAccent: {
           DEFAULT: '#06b6d4',
           light:   '#22d3ee',
-          dark:    '#0e7490',
-          glow:    'rgba(6, 182, 212, 0.25)',
+          dark:    '#0891b2',
+          glow:    'rgba(6, 182, 212, 0.28)',
           subtle:  'rgba(6, 182, 212, 0.12)',
         },
         success: {
@@ -85,9 +69,7 @@ export default {
       // ── Elevation & Glow Shadows ──────────────────────────────────────────
       boxShadow: {
         bubble: '0 2px 8px -2px rgba(0, 0, 0, 0.4), 0 1px 3px -1px rgba(0, 0, 0, 0.2)',
-        glow: '0 0 24px -4px rgba(245, 158, 11, 0.3)',
-        'glow-cyan': '0 0 24px -4px rgba(6, 182, 212, 0.3)',
-        'glow-indigo': '0 0 24px -4px rgba(99, 102, 241, 0.3)',
+        glow: '0 0 24px -4px rgba(6, 182, 212, 0.35)',
         'inner-light': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.08)',
       },
     },
