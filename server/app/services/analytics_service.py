@@ -7,7 +7,11 @@ Orchestrates analytical queries and metric reporting.
 from typing import Any
 from bson import ObjectId
 from app.repositories.analytics_repository import AnalyticsRepository
-from app.schemas.analytics import LearningVelocityItem, FatigueBucketItem
+from app.schemas.analytics import (
+    LearningVelocityItem,
+    FatigueBucketItem,
+    QuestionDifficultyItem,
+)
 
 
 class AnalyticsService:
@@ -47,6 +51,21 @@ class AnalyticsService:
         return await self.analytics_repo.get_fatigue_analysis(
             user_id=user_id,
             quiz_id=quiz_id,
+            exam_id=exam_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id,
+        )
+
+    async def get_question_difficulty(
+        self,
+        exam_id: str | None = None,
+        subject_id: str | None = None,
+        chapter_id: str | None = None,
+    ) -> list[QuestionDifficultyItem]:
+        """
+        Retrieve the ranked Question Difficulty Index leaderboard.
+        """
+        return await self.analytics_repo.get_question_difficulty_index(
             exam_id=exam_id,
             subject_id=subject_id,
             chapter_id=chapter_id,

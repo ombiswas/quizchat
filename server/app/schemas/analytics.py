@@ -42,3 +42,24 @@ class FatigueBucketItem(BaseModel):
     avg_response_time_ms: float = Field(
         description="Mean response duration in milliseconds across questions in this bucket"
     )
+
+
+class QuestionDifficultyItem(BaseModel):
+    """
+    Question Difficulty Index item.
+    Matches techstack.md §4.3 output specification.
+    """
+
+    question_id: str = Field(description="Question unique identifier (ObjectId string)")
+    question_text: str = Field(description="Display text of the question")
+    chapter: str = Field(description="Name of the chapter this question belongs to")
+    total_attempts: int = Field(description="Total number of attempts across users")
+    accuracy_pct: float = Field(
+        description="Accuracy ratio / fraction of correct attempts (0.0 - 1.0)"
+    )
+    avg_response_time_ms: float = Field(
+        description="Mean response duration in milliseconds"
+    )
+    difficulty_score: float = Field(
+        description="Weighted difficulty score: 0.6*(1-norm_acc) + 0.4*norm_time"
+    )

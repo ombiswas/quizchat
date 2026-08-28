@@ -10,7 +10,11 @@ Contains the aggregation pipelines for:
 from typing import Any
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.schemas.analytics import LearningVelocityItem, FatigueBucketItem
+from app.schemas.analytics import (
+    LearningVelocityItem,
+    FatigueBucketItem,
+    QuestionDifficultyItem,
+)
 
 # ── Learning Velocity Index (LVI) Constants (techstack.md §4.1) ───────────────
 # The composite index balances accuracy, speed (inverted response time),
@@ -18,6 +22,11 @@ from app.schemas.analytics import LearningVelocityItem, FatigueBucketItem
 WEIGHT_ACCURACY: float = 0.5
 WEIGHT_SPEED: float = 0.3
 WEIGHT_CONSISTENCY: float = 0.2
+
+# ── Question Difficulty Index (QDI) Constants (techstack.md §4.3) ────────────
+# Difficulty increases with lower accuracy and higher response duration.
+WEIGHT_DIFFICULTY_ACCURACY: float = 0.6
+WEIGHT_DIFFICULTY_TIME: float = 0.4
 
 
 class AnalyticsRepository:
@@ -428,3 +437,223 @@ class AnalyticsRepository:
             for doc in docs
             if doc.get("range") != "other"
         ]
+
+    async def get_question_difficulty_index(
+        self,
+        exam_id: str | ObjectId | None = None,
+        subject_id: str | ObjectId | None = None,
+        chapter_id: str | ObjectId | None = None,
+    ) -> list[QuestionDifficultyItem]:
+        """
+        Calculates the Question Difficulty Index across all questions.
+
+        Pipeline Stages:
+        ----------------
+        0. [$match]: Optional filter by exam_id, subject_id, or chapter_id (techstack.md §4.4)
+        1. [$group]: Group by question_id -> total attempts, correct count,
+           avg response duration, and chapter_id.
+        2. [$project]: Compute raw accuracy (correct / total) and avg response time.
+        3. [$setWindowFields]: Compute global min & max across the entire question set for
+           accuracy and avg_response_time for global min-max normalization.
+        4. [$project]: Min-max normalize dimensions to [0, 1] and compute composite difficulty_score:
+           difficulty_score = 0.6 * (1 - norm_accuracy) + 0.4 * norm_avg_time.
+        5. [$lookup]: Join with `questions` collection to retrieve question text.
+        6. [$lookup]: Join with `chapters` collection to retrieve chapter name.
+        7. [$project]: Format output schema matching techstack.md §4.3.
+        8. [$sort]: Order descending by difficulty_score (hardest questions first).
+        """
+        pipeline: list[dict[str, Any]] = []
+
+        # ── Stage 0: Optional Filter Match ────────────────────────────────────
+        match_filters: dict[str, Any] = {}
+        if exam_id:
+            match_filters["exam_id"] = (
+                ObjectId(exam_id) if isinstance(exam_id, str) and ObjectId.is_valid(exam_id) else exam_id
+            )
+        if subject_id:
+            match_filters["subject_id"] = (
+                ObjectId(subject_id) if isinstance(subject_id, str) and ObjectId.is_valid(subject_id) else subject_id
+            )
+        if chapter_id:
+            match_filters["chapter_id"] = (
+                ObjectId(chapter_id) if isinstance(chapter_id, str) and ObjectId.is_valid(chapter_id) else chapter_id
+            )
+
+        if match_filters:
+            pipeline.append({"$match": match_filters})
+
+        # ── Stage 1: Group by question_id ─────────────────────────────────────
+        # Accumulate total attempts, correct count, avg response time, and chapter_id.
+        pipeline.append({
+            "$group": {
+                "_id": "$question_id",
+                "total_attempts": {"$sum": 1},
+                "correct_count": {
+                    "$sum": {"$cond": [{"$eq": ["$is_correct", True]}, 1, 0]}
+                },
+                "avg_response_time": {"$avg": "$response_duration_ms"},
+                "chapter_id": {"$first": "$chapter_id"},
+            }
+        })
+
+        # ── Stage 2: Compute Raw Accuracy and Avg Response Time ───────────────
+        pipeline.append({
+            "$project": {
+                "question_id": "$_id",
+                "total_attempts": 1,
+                "chapter_id": 1,
+                "accuracy": {
+                    "$cond": [
+                        {"$eq": ["$total_attempts", 0]},
+                        0.0,
+                        {"$divide": ["$correct_count", "$total_attempts"]},
+                    ]
+                },
+                "avg_response_time": {"$ifNull": ["$avg_response_time", 0.0]},
+            }
+        })
+
+        # ── Stage 3: Global Window Bounds for Normalization ───────────────────
+        pipeline.append({
+            "$setWindowFields": {
+                "output": {
+                    "min_accuracy": {
+                        "$min": "$accuracy",
+                        "window": {"documents": ["unbounded", "unbounded"]},
+                    },
+                    "max_accuracy": {
+                        "$max": "$accuracy",
+                        "window": {"documents": ["unbounded", "unbounded"]},
+                    },
+                    "min_avg_time": {
+                        "$min": "$avg_response_time",
+                        "window": {"documents": ["unbounded", "unbounded"]},
+                    },
+                    "max_avg_time": {
+                        "$max": "$avg_response_time",
+                        "window": {"documents": ["unbounded", "unbounded"]},
+                    },
+                }
+            }
+        })
+
+        # ── Stage 4: Min-Max Normalization & Difficulty Formula ───────────────
+        # Normalized accuracy: (accuracy - min) / (max - min)
+        # Normalized time: (avg_time - min) / (max - min)
+        # Harder questions have lower accuracy (1 - norm_acc) and higher response time (norm_time)
+        # Composite score = 0.6 * (1 - norm_acc) + 0.4 * norm_time
+        pipeline.append({
+            "$project": {
+                "question_id": 1,
+                "chapter_id": 1,
+                "total_attempts": 1,
+                "accuracy": 1,
+                "avg_response_time": 1,
+                "difficulty_score": {
+                    "$round": [
+                        {
+                            "$add": [
+                                # 0.6 * (1 - norm_accuracy) [lower accuracy = harder]
+                                {
+                                    "$multiply": [
+                                        WEIGHT_DIFFICULTY_ACCURACY,
+                                        {
+                                            "$subtract": [
+                                                1.0,
+                                                {
+                                                    "$cond": [
+                                                        {"$eq": ["$max_accuracy", "$min_accuracy"]},
+                                                        1.0,
+                                                        {
+                                                            "$divide": [
+                                                                {"$subtract": ["$accuracy", "$min_accuracy"]},
+                                                                {"$subtract": ["$max_accuracy", "$min_accuracy"]},
+                                                            ]
+                                                        },
+                                                    ]
+                                                },
+                                            ]
+                                        },
+                                    ]
+                                },
+                                # 0.4 * norm_avg_time [longer response time = harder]
+                                {
+                                    "$multiply": [
+                                        WEIGHT_DIFFICULTY_TIME,
+                                        {
+                                            "$cond": [
+                                                {"$eq": ["$max_avg_time", "$min_avg_time"]},
+                                                0.0,
+                                                {
+                                                    "$divide": [
+                                                        {"$subtract": ["$avg_response_time", "$min_avg_time"]},
+                                                        {"$subtract": ["$max_avg_time", "$min_avg_time"]},
+                                                    ]
+                                                },
+                                            ]
+                                        },
+                                    ]
+                                },
+                            ]
+                        },
+                        4,
+                    ]
+                },
+            }
+        })
+
+        # ── Stage 5: Lookup Question Details ──────────────────────────────────
+        pipeline.append({
+            "$lookup": {
+                "from": "questions",
+                "localField": "question_id",
+                "foreignField": "_id",
+                "as": "question_info",
+            }
+        })
+
+        # ── Stage 6: Lookup Chapter Details ───────────────────────────────────
+        pipeline.append({
+            "$lookup": {
+                "from": "chapters",
+                "localField": "chapter_id",
+                "foreignField": "_id",
+                "as": "chapter_info",
+            }
+        })
+
+        # ── Stage 7: Clean Shape Projection ───────────────────────────────────
+        pipeline.append({
+            "$project": {
+                "_id": 0,
+                "question_id": {"$toString": "$question_id"},
+                "question_text": {
+                    "$ifNull": [
+                        {"$arrayElemAt": ["$question_info.text", 0]},
+                        "Unknown Question Text",
+                    ]
+                },
+                "chapter": {
+                    "$ifNull": [
+                        {"$arrayElemAt": ["$chapter_info.name", 0]},
+                        "Unknown Chapter",
+                    ]
+                },
+                "total_attempts": "$total_attempts",
+                "accuracy_pct": {"$round": ["$accuracy", 4]},
+                "avg_response_time_ms": {"$round": ["$avg_response_time", 2]},
+                "difficulty_score": "$difficulty_score",
+            }
+        })
+
+        # ── Stage 8: Sort Descending by Difficulty (Hardest First) ────────────
+        pipeline.append({
+            "$sort": {
+                "difficulty_score": -1,
+                "total_attempts": -1,
+            }
+        })
+
+        cursor = self.attempts_collection.aggregate(pipeline)
+        docs = await cursor.to_list(length=None)
+        return [QuestionDifficultyItem.model_validate(doc) for doc in docs]
