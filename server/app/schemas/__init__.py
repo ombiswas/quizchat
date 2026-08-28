@@ -23,6 +23,8 @@ from app.schemas.quiz import (
     ClientQuestionResponse,
     CreateQuizRequest,
     QuizStartResponse,
+    SubmitAnswerRequest,
+    SubmitAnswerResponse,
 )
 
 __all__ = [
@@ -36,4 +38,6 @@ __all__ = [
     "ClientQuestionResponse",
     "CreateQuizRequest",
     "QuizStartResponse",
+    "SubmitAnswerRequest",
+    "SubmitAnswerResponse",
 ]

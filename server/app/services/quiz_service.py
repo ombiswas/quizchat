@@ -13,13 +13,16 @@ from bson import ObjectId
 from fastapi import HTTPException, status
 
 from app.core.config import settings
+from app.models.question_attempt import QuestionAttempt
 from app.models.quiz import Quiz
 from app.repositories.chapter_repository import ChapterRepository
+from app.repositories.question_attempt_repository import QuestionAttemptRepository
 from app.repositories.question_repository import QuestionRepository
 from app.repositories.quiz_repository import QuizRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
     QuizStartResponse,
+    SubmitAnswerResponse,
 )
 
 
@@ -33,10 +36,12 @@ class QuizService:
         quiz_repo: QuizRepository,
         question_repo: QuestionRepository,
         chapter_repo: ChapterRepository,
+        attempt_repo: QuestionAttemptRepository,
     ):
         self.quiz_repo = quiz_repo
         self.question_repo = question_repo
         self.chapter_repo = chapter_repo
+        self.attempt_repo = attempt_repo
 
     async def create_quiz(
         self,
@@ -172,4 +177,137 @@ class QuizService:
             question=question,
             question_index=quiz.current_index,
             total_questions=len(quiz.question_ids),
+        )
+
+    async def submit_answer(
+        self,
+        user_id: str | ObjectId,
+        quiz_id: str,
+        question_id: str,
+        selected_option: str,
+    ) -> SubmitAnswerResponse:
+        """
+        Process an answer submission for the current question in a quiz.
+
+        Enforcement & Analytics Event Stamping:
+        --------------------------------------
+        1. Stale / Out-of-order Rejection:
+           Verifies that `question_id` matches `quiz.question_ids[quiz.current_index]`.
+           Any attempt to submit for a previously answered question or a skipped index
+           is rejected with 409 Conflict. This guarantees sequential progression.
+        2. Correctness & Duration:
+           Compares `selected_option` against the question's `correct_option`.
+           Calculates `response_duration_ms = answer_submitted_at (now) - question_shown_at`.
+        3. Event Log (techstack.md §3.2):
+           Inserts an immutable `QuestionAttempt` record containing all 11 fields.
+        4. Progress Advance:
+           Increments `quiz.current_index` and `quiz.score` (if correct).
+           Marks status "completed" and sets `completed_at` if all questions are done.
+        5. Response:
+           Returns `{ is_correct, correct_option, next_question }`.
+        """
+        # 1. Validate quiz exists
+        quiz = await self.quiz_repo.get_by_id(quiz_id)
+        if not quiz:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Quiz with id '{quiz_id}' not found.",
+            )
+
+        # 2. Ownership check
+        req_user_id_str = str(user_id)
+        quiz_user_id_str = str(quiz.user_id)
+        if req_user_id_str != quiz_user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to submit answers for this quiz.",
+            )
+
+        # 3. Status check
+        if quiz.status != "in_progress" or quiz.current_index >= len(quiz.question_ids):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Quiz has already been completed.",
+            )
+
+        # 4. Strict Index / Question ID match ("no going back" enforcement)
+        expected_question_id_str = str(quiz.question_ids[quiz.current_index])
+        if str(question_id) != expected_question_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Out-of-order submission: expected question '{expected_question_id_str}' "
+                    f"at index {quiz.current_index}, but received '{question_id}'."
+                ),
+            )
+
+        # 5. Fetch question model to evaluate correct_option
+        question = await self.question_repo.get_by_id(expected_question_id_str)
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Question with id '{expected_question_id_str}' not found.",
+            )
+
+        # 6. Evaluate correctness
+        normalized_selected = selected_option.strip().upper()
+        normalized_correct = question.correct_option.strip().upper()
+        is_correct = normalized_selected == normalized_correct
+
+        # 7. Compute timing
+        now = datetime.now(timezone.utc)
+        shown_at = quiz.current_question_shown_at or quiz.started_at or now
+        # Ensure non-negative duration in case of clock drift
+        response_duration_ms = max(0, int((now - shown_at).total_seconds() * 1000))
+
+        # 8. Record immutable QuestionAttempt event with all 11 fields (techstack.md §3.2)
+        attempt = QuestionAttempt(
+            user_id=quiz.user_id,
+            quiz_id=quiz.id,
+            question_id=question.id,
+            exam_id=quiz.exam_id,
+            subject_id=quiz.subject_id,
+            chapter_id=quiz.chapter_id,
+            question_index_in_quiz=quiz.current_index,
+            question_shown_at=shown_at,
+            answer_submitted_at=now,
+            response_duration_ms=response_duration_ms,
+            selected_option=normalized_selected,
+            is_correct=is_correct,
+        )
+        await self.attempt_repo.create(attempt)
+
+        # 9. Advance quiz progress
+        new_index = quiz.current_index + 1
+        new_score = quiz.score + (1 if is_correct else 0)
+        is_completed = new_index >= len(quiz.question_ids)
+        new_status = "completed" if is_completed else "in_progress"
+        completed_at = now if is_completed else None
+        next_shown_at = now if not is_completed else None
+
+        await self.quiz_repo.update_progress(
+            quiz_id=quiz.id,
+            current_index=new_index,
+            score=new_score,
+            status=new_status,
+            completed_at=completed_at,
+            current_question_shown_at=next_shown_at,
+        )
+
+        # 10. Fetch next question if quiz remains in_progress
+        next_client_q: ClientQuestionResponse | None = None
+        if not is_completed:
+            next_question_id = quiz.question_ids[new_index]
+            next_q_model = await self.question_repo.get_by_id(next_question_id)
+            if next_q_model:
+                next_client_q = ClientQuestionResponse.from_model(
+                    question=next_q_model,
+                    question_index=new_index,
+                    total_questions=len(quiz.question_ids),
+                )
+
+        return SubmitAnswerResponse(
+            is_correct=is_correct,
+            correct_option=question.correct_option,
+            next_question=next_client_q,
         )

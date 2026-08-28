@@ -9,12 +9,15 @@ from app.core.db import get_database
 from app.core.security import get_current_user
 from app.models.user import User
 from app.repositories.chapter_repository import ChapterRepository
+from app.repositories.question_attempt_repository import QuestionAttemptRepository
 from app.repositories.question_repository import QuestionRepository
 from app.repositories.quiz_repository import QuizRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
     CreateQuizRequest,
     QuizStartResponse,
+    SubmitAnswerRequest,
+    SubmitAnswerResponse,
 )
 from app.services.quiz_service import QuizService
 
@@ -27,7 +30,8 @@ def get_quiz_service(
     quiz_repo = QuizRepository(db)
     question_repo = QuestionRepository(db)
     chapter_repo = ChapterRepository(db)
-    return QuizService(quiz_repo, question_repo, chapter_repo)
+    attempt_repo = QuestionAttemptRepository(db)
+    return QuizService(quiz_repo, question_repo, chapter_repo, attempt_repo)
 
 
 @router.post(
@@ -65,4 +69,27 @@ async def get_current_question(
     return await service.get_current_question(
         user_id=current_user.id,
         quiz_id=quiz_id,
+    )
+
+
+@router.post(
+    "/{quiz_id}/submit",
+    response_model=SubmitAnswerResponse,
+    summary="Submit answer for the current question",
+    description=(
+        "Evaluates the submitted answer, records an immutable question_attempt event, "
+        "advances the quiz index, and returns correctness feedback and the next question."
+    ),
+)
+async def submit_answer(
+    quiz_id: str,
+    request: SubmitAnswerRequest,
+    current_user: User = Depends(get_current_user),
+    service: QuizService = Depends(get_quiz_service),
+) -> SubmitAnswerResponse:
+    return await service.submit_answer(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+        question_id=request.question_id,
+        selected_option=request.selected_option,
     )

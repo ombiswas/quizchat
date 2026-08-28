@@ -19,6 +19,7 @@ from app.repositories.subject_repository import SubjectRepository
 from app.repositories.chapter_repository import ChapterRepository
 from app.repositories.question_repository import QuestionRepository
 from app.repositories.quiz_repository import QuizRepository
+from app.repositories.question_attempt_repository import QuestionAttemptRepository
 
 __all__ = [
     "UserRepository",
@@ -27,4 +28,5 @@ __all__ = [
     "ChapterRepository",
     "QuestionRepository",
     "QuizRepository",
+    "QuestionAttemptRepository",
 ]

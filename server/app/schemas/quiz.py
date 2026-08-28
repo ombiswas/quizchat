@@ -66,3 +66,29 @@ class QuizStartResponse(BaseModel):
     current_index: int = 0
     total_questions: int
     question: ClientQuestionResponse
+
+
+class SubmitAnswerRequest(BaseModel):
+    """
+    Request payload when submitting an answer to a question.
+    """
+
+    question_id: str = Field(
+        description="24-character hexadecimal MongoDB ObjectId of the question being answered"
+    )
+    selected_option: str = Field(
+        description="Option key selected by the user (e.g. 'A', 'B', 'C', 'D')"
+    )
+
+
+class SubmitAnswerResponse(BaseModel):
+    """
+    Response returned after submitting an answer.
+    """
+
+    is_correct: bool = Field(description="Whether the selected option matched correct_option")
+    correct_option: str = Field(description="The correct option key for feedback display")
+    next_question: ClientQuestionResponse | None = Field(
+        default=None,
+        description="The next question in the thread, or null if the quiz is complete",
+    )

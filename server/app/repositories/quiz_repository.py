@@ -66,6 +66,7 @@ class QuizRepository:
         score: int,
         status: str,
         completed_at: datetime | None = None,
+        current_question_shown_at: datetime | None = None,
     ) -> None:
         """
         Update a quiz's progress state after an answer submission.
@@ -79,6 +80,7 @@ class QuizRepository:
             "current_index": current_index,
             "score": score,
             "status": status,
+            "current_question_shown_at": current_question_shown_at,
         }
         if completed_at is not None:
             update_fields["completed_at"] = completed_at
