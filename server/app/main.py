@@ -1,0 +1,109 @@
+"""
+FastAPI application factory.
+
+This module creates and configures the FastAPI application instance.
+It is the single entry point for uvicorn: `uvicorn app.main:app`.
+
+Responsibilities:
+  - Define the application lifespan (startup/shutdown hooks) to manage
+    the Motor connection pool correctly.
+  - Mount CORS middleware so the React frontend can reach the API.
+  - Register all API routers (added incrementally as each phase is built).
+  - Expose the /health endpoint used by Docker's healthcheck and reviewers.
+"""
+
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.core.db import get_motor_client
+
+
+# ── Lifespan ──────────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Manage the Motor connection pool across the application's lifetime.
+
+    Why here, not at module import time?
+    Creating the client at module import time makes testing harder (the client
+    tries to connect immediately) and ties the pool's lifetime to the Python
+    process rather than the ASGI app.  Using FastAPI's lifespan means the
+    connection is opened exactly once when the app starts accepting requests
+    and closed cleanly when it stops — even during hot-reload cycles.
+    """
+    # ── Startup ───────────────────────────────────────────────────────────────
+    motor_client = get_motor_client()
+    app.state.motor_client = motor_client
+    app.state.db = motor_client[settings.mongo_db_name]
+
+    yield  # Application runs here
+
+    # ── Shutdown ──────────────────────────────────────────────────────────────
+    motor_client.close()
+
+
+# ── App factory ───────────────────────────────────────────────────────────────
+
+def create_app() -> FastAPI:
+    """
+    Build and configure the FastAPI application.
+
+    Keeping app creation in a factory function (rather than a bare module-level
+    `app = FastAPI(...)`) makes it easy to create isolated app instances in
+    tests without importing global state.
+    """
+    application = FastAPI(
+        title="QuizChat API",
+        description=(
+            "Backend for the WhatsApp-style quiz application. "
+            "Interactive docs available at /docs."
+        ),
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+
+    # ── CORS ──────────────────────────────────────────────────────────────────
+    # Allow the configured frontend origin to call the API from a browser.
+    # In production, replace allow_origins with the exact deployed frontend URL.
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[settings.frontend_origin],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # ── Routers ───────────────────────────────────────────────────────────────
+    # Routers are registered here as each phase is built.  Importing them at
+    # the top of this file would cause circular imports, so they are imported
+    # inline inside create_app().
+    # (No routers yet — added in Phase 2 and beyond.)
+
+    return application
+
+
+# Module-level app instance — this is what uvicorn imports.
+app = create_app()
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+
+@app.get("/health", tags=["Health"])
+async def health_check() -> dict:
+    """
+    Liveness probe.
+
+    Returns 200 as long as the Python process is alive and the ASGI app is
+    responding.  Docker's healthcheck and the reviewer's first smoke-test
+    both rely on this endpoint.
+
+    Note: this does NOT check MongoDB connectivity — that would make it a
+    readiness probe (a different concept).  A separate /health/ready endpoint
+    can be added later if needed.
+    """
+    return {"status": "ok"}

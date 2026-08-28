@@ -1,0 +1,3 @@
+"""
+QuizChat backend application package.
+"""
