@@ -7,7 +7,7 @@ services:
     container_name: quizchat_mongo
     restart: unless-stopped
     environment:
-      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-quizchat}
+      MONGO_INITDB_DATABASE: quizchat
     ports:
       - "27017:27017"
     volumes:
@@ -31,13 +31,8 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    environment:
-      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
-      MONGO_DB_NAME: ${MONGO_DB_NAME:-quizchat}
-      JWT_SECRET: ${JWT_SECRET}
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
     env_file:
-      - .env
+      - ./server/.env
     volumes:
       # Mount source for local hot-reload during development.
       # Remove this volume in a production image build.
@@ -55,10 +50,8 @@ services:
       - backend
     ports:
       - "5173:5173"
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     env_file:
-      - .env
+      - ./client/.env
     volumes:
       # Mount source for local hot-reload during development.
       - ./client:/app
@@ -76,12 +69,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    environment:
-      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
-      MONGO_DB_NAME: ${MONGO_DB_NAME:-quizchat}
-      JWT_SECRET: ${JWT_SECRET:-changeme}
     env_file:
-      - .env
+      - ./server/.env
     command: python -m app.scripts.seed_data --force
     profiles:
       - seed

@@ -27,9 +27,15 @@ Analysis**, and **Question Difficulty Index**.
 ```bash
 git clone <repo-url>
 cd quizchat
-cp .env.example .env
-# Edit .env — at minimum, set JWT_SECRET to a strong random value:
+
+# Backend config (MongoDB, JWT secret, CORS, seed counts)
+cp server/.env.example server/.env
+# Edit server/.env — at minimum, set JWT_SECRET to a strong random value:
 # python -c "import secrets; print(secrets.token_hex(32))"
+
+# Frontend config (API base URL)
+cp client/.env.example client/.env
+# Edit client/.env if your backend runs on a non-default port/host
 ```
 
 ### 2. Start all services

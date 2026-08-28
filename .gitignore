@@ -2,6 +2,9 @@
 /docs
 
 # ── Environment files ─────────────────────────────────────────────────────────
+# Ignore actual .env files (contain secrets) but always track .env.example files.
+server/.env
+client/.env
 .env
 .env.local
 .env.*.local
