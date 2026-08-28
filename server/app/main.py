@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.db import get_motor_client
+from app.core.indexes import create_indexes
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -27,7 +28,8 @@ from app.core.db import get_motor_client
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
-    Manage the Motor connection pool across the application's lifetime.
+    Manage the Motor connection pool and database initialization across the
+    application's lifetime.
 
     Why here, not at module import time?
     Creating the client at module import time makes testing harder (the client
@@ -40,6 +42,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     motor_client = get_motor_client()
     app.state.motor_client = motor_client
     app.state.db = motor_client[settings.mongo_db_name]
+
+    # Create MongoDB indexes on application startup (techstack.md §3.3)
+    await create_indexes(app.state.db)
 
     yield  # Application runs here
 
