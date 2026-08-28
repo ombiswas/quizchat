@@ -2,26 +2,17 @@
  * Application router definition.
  *
  * All routes are declared here in one place so the full URL structure of the
- * app is visible at a glance.  Route components are lazy-loaded with React.lazy
- * to keep the initial bundle small — each screen only loads when navigated to.
- *
- * Route map (filled in as phases are built):
- *   /                → LoginPage        (Phase 5-P2)
- *   /exams           → ExamListPage     (Phase 5-P3)
- *   /exams/:examId/subjects → SubjectListPage (Phase 5-P3)
- *   /subjects/:subjectId/chapters → ChapterListPage (Phase 5-P3)
- *   /quiz/:quizId    → QuizPage         (Phase 5-P4)
- *   /quiz/:quizId/result → ResultPage   (Phase 5-P5)
- *   /analytics       → AnalyticsPage    (Phase 5-P6)
- *
- * For now, only the placeholder "/" route is wired.
+ * app is visible at a glance.
  */
 
 import { Suspense } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
-// Eager import for the login screen — always the first load.
+// Eager imports for primary flow screens
 import LoginPage from '@/routes/LoginPage'
+import ExamListPage from '@/routes/ExamListPage'
+import SubjectListPage from '@/routes/SubjectListPage'
+import ChapterListPage from '@/routes/ChapterListPage'
 
 import { AppShell } from '@/components/layout/AppShell'
 
@@ -56,9 +47,22 @@ export const router = createBrowserRouter([
         path: '/',
         element: <LoginPage />,
       },
-      // Routes added here incrementally in Phase 5:
-      // { path: '/exams', element: <ExamListPage /> },
-      // ...
+      {
+        path: '/exams',
+        element: <ExamListPage />,
+      },
+      {
+        path: '/exams/:examId/subjects',
+        element: <SubjectListPage />,
+      },
+      {
+        path: '/subjects/:subjectId/chapters',
+        element: <ChapterListPage />,
+      },
+      // Subsequent phase routes:
+      // { path: '/quiz/:quizId', element: <QuizPage /> },
+      // { path: '/quiz/:quizId/result', element: <ResultPage /> },
+      // { path: '/analytics', element: <AnalyticsPage /> },
     ],
   },
 ])
