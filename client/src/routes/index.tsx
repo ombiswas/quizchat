@@ -13,6 +13,7 @@ import LoginPage from '@/routes/LoginPage'
 import ExamListPage from '@/routes/ExamListPage'
 import SubjectListPage from '@/routes/SubjectListPage'
 import ChapterListPage from '@/routes/ChapterListPage'
+import QuizPage from '@/routes/QuizPage'
 
 import { AppShell } from '@/components/layout/AppShell'
 
@@ -59,8 +60,11 @@ export const router = createBrowserRouter([
         path: '/subjects/:subjectId/chapters',
         element: <ChapterListPage />,
       },
+      {
+        path: '/quiz/:quizId',
+        element: <QuizPage />,
+      },
       // Subsequent phase routes:
-      // { path: '/quiz/:quizId', element: <QuizPage /> },
       // { path: '/quiz/:quizId/result', element: <ResultPage /> },
       // { path: '/analytics', element: <AnalyticsPage /> },
     ],
