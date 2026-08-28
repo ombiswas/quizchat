@@ -11,10 +11,12 @@ from app.services.user_service import UserService
 from app.services.auth_service import AuthService
 from app.services.exam_service import CurriculumService
 from app.services.quiz_service import QuizService
+from app.services.analytics_service import AnalyticsService
 
 __all__ = [
     "UserService",
     "AuthService",
     "CurriculumService",
     "QuizService",
+    "AnalyticsService",
 ]

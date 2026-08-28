@@ -12,6 +12,7 @@ from app.api.auth import router as auth_router
 from app.api.exams import router as exams_router
 from app.api.subjects import router as subjects_router
 from app.api.quizzes import router as quizzes_router
+from app.api.analytics import router as analytics_router
 
 __all__ = [
     "users_router",
@@ -19,4 +20,5 @@ __all__ = [
     "exams_router",
     "subjects_router",
     "quizzes_router",
+    "analytics_router",
 ]
