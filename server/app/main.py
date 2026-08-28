@@ -89,11 +89,13 @@ def create_app() -> FastAPI:
     from app.api.auth import router as auth_router
     from app.api.exams import router as exams_router
     from app.api.subjects import router as subjects_router
+    from app.api.quizzes import router as quizzes_router
 
     application.include_router(users_router, prefix="/api")
     application.include_router(auth_router, prefix="/api")
     application.include_router(exams_router, prefix="/api")
     application.include_router(subjects_router, prefix="/api")
+    application.include_router(quizzes_router, prefix="/api")
 
     return application
 

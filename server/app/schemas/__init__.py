@@ -18,6 +18,12 @@ from app.schemas.curriculum import (
     SubjectResponse,
     ChapterResponse,
 )
+from app.schemas.quiz import (
+    ClientOptionResponse,
+    ClientQuestionResponse,
+    CreateQuizRequest,
+    QuizStartResponse,
+)
 
 __all__ = [
     "UserResponse",
@@ -26,4 +32,8 @@ __all__ = [
     "ExamResponse",
     "SubjectResponse",
     "ChapterResponse",
+    "ClientOptionResponse",
+    "ClientQuestionResponse",
+    "CreateQuizRequest",
+    "QuizStartResponse",
 ]

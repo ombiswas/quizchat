@@ -23,3 +23,4 @@ class Quiz(MongoBaseModel):
     score: int = 0
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
+    current_question_shown_at: datetime | None = None

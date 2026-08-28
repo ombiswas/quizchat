@@ -17,10 +17,14 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.exam_repository import ExamRepository
 from app.repositories.subject_repository import SubjectRepository
 from app.repositories.chapter_repository import ChapterRepository
+from app.repositories.question_repository import QuestionRepository
+from app.repositories.quiz_repository import QuizRepository
 
 __all__ = [
     "UserRepository",
     "ExamRepository",
     "SubjectRepository",
     "ChapterRepository",
+    "QuestionRepository",
+    "QuizRepository",
 ]
