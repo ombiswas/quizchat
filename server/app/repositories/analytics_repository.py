@@ -10,7 +10,7 @@ Contains the aggregation pipelines for:
 from typing import Any
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.schemas.analytics import LearningVelocityItem
+from app.schemas.analytics import LearningVelocityItem, FatigueBucketItem
 
 # ── Learning Velocity Index (LVI) Constants (techstack.md §4.1) ───────────────
 # The composite index balances accuracy, speed (inverted response time),
@@ -304,3 +304,127 @@ class AnalyticsRepository:
         cursor = self.attempts_collection.aggregate(pipeline)
         docs = await cursor.to_list(length=None)
         return [LearningVelocityItem.model_validate(doc) for doc in docs]
+
+    async def get_fatigue_analysis(
+        self,
+        user_id: str | ObjectId | None = None,
+        quiz_id: str | ObjectId | None = None,
+        exam_id: str | ObjectId | None = None,
+        subject_id: str | ObjectId | None = None,
+        chapter_id: str | ObjectId | None = None,
+        bucket_size: int = 5,
+    ) -> list[FatigueBucketItem]:
+        """
+        Calculates Fatigue Analysis across question sequence positions.
+
+        Modes (techstack.md §4.2):
+          1. Per-quiz fatigue (quiz_id provided): within-session drop-off for a specific quiz attempt.
+          2. Per-user aggregate fatigue (user_id provided): aggregated fatigue across all quizzes for a user.
+          3. Systemic aggregate fatigue (no user/quiz provided): global fatigue pattern across all users.
+
+        Pipeline Stages:
+        ----------------
+        0. [$match]: Filter on user_id, quiz_id, exam_id, subject_id, chapter_id as provided.
+        1. Dynamic Boundaries: Determine maximum question_index_in_quiz to size boundaries [0, 5, 10, 15, ...]
+           without hardcoding boundaries beyond actual existing data.
+        2. [$bucket]: Group by question_index_in_quiz into dynamic boundaries:
+           - Accumulates total_count, accuracy ($avg of conditional 1/0 for is_correct),
+             and avg_response_time_ms ($avg of response_duration_ms).
+        3. [$sort]: Order ascending by bucket lower bound.
+        4. [$project]: Format the 1-based human-readable label "1-5", "6-10", "11-15", etc.
+        """
+        match_filter: dict[str, Any] = {}
+        if user_id:
+            match_filter["user_id"] = (
+                ObjectId(user_id) if isinstance(user_id, str) and ObjectId.is_valid(user_id) else user_id
+            )
+        if quiz_id:
+            match_filter["quiz_id"] = (
+                ObjectId(quiz_id) if isinstance(quiz_id, str) and ObjectId.is_valid(quiz_id) else quiz_id
+            )
+        if exam_id:
+            match_filter["exam_id"] = (
+                ObjectId(exam_id) if isinstance(exam_id, str) and ObjectId.is_valid(exam_id) else exam_id
+            )
+        if subject_id:
+            match_filter["subject_id"] = (
+                ObjectId(subject_id) if isinstance(subject_id, str) and ObjectId.is_valid(subject_id) else subject_id
+            )
+        if chapter_id:
+            match_filter["chapter_id"] = (
+                ObjectId(chapter_id) if isinstance(chapter_id, str) and ObjectId.is_valid(chapter_id) else chapter_id
+            )
+
+        # 1. Find max question_index_in_quiz actually present in matching attempts
+        max_attempt_doc = await self.attempts_collection.find_one(
+            match_filter,
+            sort=[("question_index_in_quiz", -1)],
+            projection={"question_index_in_quiz": 1},
+        )
+        if not max_attempt_doc:
+            return []
+
+        max_index = max_attempt_doc.get("question_index_in_quiz", 0)
+        # Sizing boundaries to cover all observed question indices: [0, 5, 10, 15, ...]
+        max_boundary = ((max_index // bucket_size) + 1) * bucket_size
+        boundaries = list(range(0, max_boundary + bucket_size + 1, bucket_size))
+        # Ensure at least two boundaries for $bucket
+        if len(boundaries) < 2:
+            boundaries = [0, bucket_size]
+
+        pipeline: list[dict[str, Any]] = []
+
+        # ── Stage 0: Match Filter ─────────────────────────────────────────────
+        if match_filter:
+            pipeline.append({"$match": match_filter})
+
+        # ── Stage 1: Bucket on question_index_in_quiz ─────────────────────────
+        pipeline.append({
+            "$bucket": {
+                "groupBy": "$question_index_in_quiz",
+                "boundaries": boundaries,
+                "default": "other",
+                "output": {
+                    "total_count": {"$sum": 1},
+                    "accuracy": {
+                        "$avg": {
+                            "$cond": [{"$eq": ["$is_correct", True]}, 1.0, 0.0]
+                        }
+                    },
+                    "avg_response_time_ms": {"$avg": "$response_duration_ms"},
+                },
+            }
+        })
+
+        # ── Stage 2: Sort by bucket start index ascending ─────────────────────
+        pipeline.append({"$sort": {"_id": 1}})
+
+        # ── Stage 3: Project human-readable 1-based range and round metrics ───
+        pipeline.append({
+            "$project": {
+                "_id": 0,
+                "range": {
+                    "$cond": [
+                        {"$isNumber": "$_id"},
+                        {
+                            "$concat": [
+                                {"$toString": {"$add": ["$_id", 1]}},
+                                "-",
+                                {"$toString": {"$add": ["$_id", bucket_size]}},
+                            ]
+                        },
+                        {"$toString": "$_id"},
+                    ]
+                },
+                "accuracy": {"$round": ["$accuracy", 4]},
+                "avg_response_time_ms": {"$round": ["$avg_response_time_ms", 2]},
+            }
+        })
+
+        cursor = self.attempts_collection.aggregate(pipeline)
+        docs = await cursor.to_list(length=None)
+        return [
+            FatigueBucketItem.model_validate(doc)
+            for doc in docs
+            if doc.get("range") != "other"
+        ]

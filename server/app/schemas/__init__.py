@@ -27,7 +27,7 @@ from app.schemas.quiz import (
     SubmitAnswerResponse,
     QuizResultResponse,
 )
-from app.schemas.analytics import LearningVelocityItem
+from app.schemas.analytics import LearningVelocityItem, FatigueBucketItem
 
 __all__ = [
     "UserResponse",
@@ -44,4 +44,5 @@ __all__ = [
     "SubmitAnswerResponse",
     "QuizResultResponse",
     "LearningVelocityItem",
+    "FatigueBucketItem",
 ]

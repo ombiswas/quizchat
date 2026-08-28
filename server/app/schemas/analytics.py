@@ -25,3 +25,20 @@ class LearningVelocityItem(BaseModel):
     learning_velocity_index: float = Field(
         description="Weighted composite score: 0.5*norm_acc + 0.3*(1-norm_time) + 0.2*norm_consistency"
     )
+
+
+class FatigueBucketItem(BaseModel):
+    """
+    Fatigue analysis metrics per question bucket.
+    Matches techstack.md §4.2 output specification.
+    """
+
+    range: str = Field(
+        description="1-based question position range within the quiz (e.g. '1-5', '6-10', '11-15')"
+    )
+    accuracy: float = Field(
+        description="Average accuracy ratio in this question bucket (0.0 - 1.0)"
+    )
+    avg_response_time_ms: float = Field(
+        description="Mean response duration in milliseconds across questions in this bucket"
+    )
