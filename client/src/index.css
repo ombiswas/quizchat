@@ -1,13 +1,5 @@
 /*
- * Global CSS entry point.
- *
- * The three @tailwind directives inject:
- *   - base:       Tailwind's reset (Preflight)
- *   - components: Any component classes from plugins
- *   - utilities:  All utility classes (the bulk of Tailwind)
- *
- * Keep custom CSS to a minimum — prefer Tailwind utility classes in JSX.
- * Place truly global overrides (e.g. scrollbar styling) below the directives.
+ * Global CSS styles & design tokens.
  */
 
 @tailwind base;
@@ -15,24 +7,50 @@
 @tailwind utilities;
 
 @layer base {
-  /* Apply the ink background and default text colour to the whole document
-     so every page starts from the dark theme without needing per-element classes. */
   html {
-    @apply bg-ink-950 text-white antialiased;
+    @apply bg-ink-950 text-ink-100 font-sans antialiased;
+    color-scheme: dark;
+    scroll-behavior: smooth;
   }
 
-  /* Smooth scrolling for the chat thread auto-scroll behaviour. */
-  html {
-    scroll-behavior: smooth;
+  body {
+    @apply min-h-screen bg-ink-950 text-ink-100 flex flex-col selection:bg-accent selection:text-ink-950;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
   }
 }
 
 @layer utilities {
-  /* Reusable chat bubble shape — used by QuizScreen in Phase 5. */
+  /* Incoming question message bubble */
   .bubble-in {
-    @apply rounded-bubble rounded-tl-sm bg-ink-800 px-4 py-3 text-white;
+    @apply rounded-bubble rounded-tl-sm bg-ink-850 border border-ink-700/60 p-4 text-ink-100 shadow-bubble;
   }
+
+  /* User outgoing answer message bubble */
   .bubble-out {
-    @apply rounded-bubble rounded-tr-sm bg-accent px-4 py-3 text-ink-950 font-medium;
+    @apply rounded-bubble rounded-tr-sm bg-accent text-ink-950 font-semibold p-4 shadow-bubble;
+  }
+
+  /* Interactive option bubble */
+  .bubble-option {
+    @apply rounded-bubble bg-ink-800 border border-ink-700/80 hover:border-accent/60 hover:bg-ink-750 transition-all duration-200 text-ink-100;
+  }
+
+  /* Frosted top navigation bar */
+  .frosted-glass {
+    @apply bg-ink-950/85 backdrop-blur-md border-b border-ink-700/60;
   }
 }

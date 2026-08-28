@@ -18,10 +18,12 @@
  */
 
 import { Suspense } from 'react'
-import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
 // Eager import for the placeholder — it's tiny and always the first load.
 import HomePage from '@/routes/HomePage'
+
+import { AppShell } from '@/components/layout/AppShell'
 
 // ── Loading fallback ──────────────────────────────────────────────────────────
 
@@ -34,12 +36,12 @@ function PageLoader() {
 }
 
 // ── Root layout ───────────────────────────────────────────────────────────────
-// Wraps all routes.  Navigation bar, auth guards etc. will live here in Phase 5.
+// Wraps all routes with the AppShell (TopBar + responsive main container).
 
 function RootLayout() {
   return (
     <Suspense fallback={<PageLoader />}>
-      <Outlet />
+      <AppShell />
     </Suspense>
   )
 }
