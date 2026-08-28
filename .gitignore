@@ -1,5 +1,7 @@
 # ── Docs (internal planning files, not for the repo) ──────────────────────────
 /docs
+/.agents
+/graphify-out
 
 # ── Environment files ─────────────────────────────────────────────────────────
 # Ignore actual .env files (contain secrets) but always track .env.example files.
