@@ -29,6 +29,44 @@ WEIGHT_DIFFICULTY_ACCURACY: float = 0.6
 WEIGHT_DIFFICULTY_TIME: float = 0.4
 
 
+def _build_curriculum_match_filter(
+    exam_id: str | ObjectId | None = None,
+    subject_id: str | ObjectId | None = None,
+    chapter_id: str | ObjectId | None = None,
+    user_id: str | ObjectId | None = None,
+    quiz_id: str | ObjectId | None = None,
+) -> dict[str, Any]:
+    """
+    Constructs a validated MongoDB $match filter dictionary for question_attempts queries.
+    Shared helper (techstack.md §4.4) reused across all three analytics pipelines:
+      - Learning Velocity Index (§4.1)
+      - Fatigue Analysis (§4.2)
+      - Question Difficulty Index (§4.3)
+    """
+    match_filter: dict[str, Any] = {}
+    if exam_id:
+        match_filter["exam_id"] = (
+            ObjectId(exam_id) if isinstance(exam_id, str) and ObjectId.is_valid(exam_id) else exam_id
+        )
+    if subject_id:
+        match_filter["subject_id"] = (
+            ObjectId(subject_id) if isinstance(subject_id, str) and ObjectId.is_valid(subject_id) else subject_id
+        )
+    if chapter_id:
+        match_filter["chapter_id"] = (
+            ObjectId(chapter_id) if isinstance(chapter_id, str) and ObjectId.is_valid(chapter_id) else chapter_id
+        )
+    if user_id:
+        match_filter["user_id"] = (
+            ObjectId(user_id) if isinstance(user_id, str) and ObjectId.is_valid(user_id) else user_id
+        )
+    if quiz_id:
+        match_filter["quiz_id"] = (
+            ObjectId(quiz_id) if isinstance(quiz_id, str) and ObjectId.is_valid(quiz_id) else quiz_id
+        )
+    return match_filter
+
+
 class AnalyticsRepository:
     """
     Data-access layer executing complex analytical aggregation pipelines
@@ -66,24 +104,15 @@ class AnalyticsRepository:
         """
         pipeline: list[dict[str, Any]] = []
 
-        # ── Stage 0: Optional Filter Match ────────────────────────────────────
+        # ── Stage 0: Optional Filter Match (Shared Helper) ────────────────────
         # Supports scoping analytics down to a specific exam, subject, or chapter.
-        match_filters: dict[str, Any] = {}
-        if exam_id:
-            match_filters["exam_id"] = (
-                ObjectId(exam_id) if isinstance(exam_id, str) and ObjectId.is_valid(exam_id) else exam_id
-            )
-        if subject_id:
-            match_filters["subject_id"] = (
-                ObjectId(subject_id) if isinstance(subject_id, str) and ObjectId.is_valid(subject_id) else subject_id
-            )
-        if chapter_id:
-            match_filters["chapter_id"] = (
-                ObjectId(chapter_id) if isinstance(chapter_id, str) and ObjectId.is_valid(chapter_id) else chapter_id
-            )
-
-        if match_filters:
-            pipeline.append({"$match": match_filters})
+        match_filter = _build_curriculum_match_filter(
+            exam_id=exam_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id,
+        )
+        if match_filter:
+            pipeline.append({"$match": match_filter})
 
         # ── Stage 1: Group by User ───────────────────────────────────────────
         # Aggregate raw metrics per user:
@@ -342,27 +371,14 @@ class AnalyticsRepository:
         3. [$sort]: Order ascending by bucket lower bound.
         4. [$project]: Format the 1-based human-readable label "1-5", "6-10", "11-15", etc.
         """
-        match_filter: dict[str, Any] = {}
-        if user_id:
-            match_filter["user_id"] = (
-                ObjectId(user_id) if isinstance(user_id, str) and ObjectId.is_valid(user_id) else user_id
-            )
-        if quiz_id:
-            match_filter["quiz_id"] = (
-                ObjectId(quiz_id) if isinstance(quiz_id, str) and ObjectId.is_valid(quiz_id) else quiz_id
-            )
-        if exam_id:
-            match_filter["exam_id"] = (
-                ObjectId(exam_id) if isinstance(exam_id, str) and ObjectId.is_valid(exam_id) else exam_id
-            )
-        if subject_id:
-            match_filter["subject_id"] = (
-                ObjectId(subject_id) if isinstance(subject_id, str) and ObjectId.is_valid(subject_id) else subject_id
-            )
-        if chapter_id:
-            match_filter["chapter_id"] = (
-                ObjectId(chapter_id) if isinstance(chapter_id, str) and ObjectId.is_valid(chapter_id) else chapter_id
-            )
+        # ── Stage 0: Optional Filter Match (Shared Helper) ────────────────────
+        match_filter = _build_curriculum_match_filter(
+            exam_id=exam_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id,
+            user_id=user_id,
+            quiz_id=quiz_id,
+        )
 
         # 1. Find max question_index_in_quiz actually present in matching attempts
         max_attempt_doc = await self.attempts_collection.find_one(
@@ -464,23 +480,15 @@ class AnalyticsRepository:
         """
         pipeline: list[dict[str, Any]] = []
 
-        # ── Stage 0: Optional Filter Match ────────────────────────────────────
-        match_filters: dict[str, Any] = {}
-        if exam_id:
-            match_filters["exam_id"] = (
-                ObjectId(exam_id) if isinstance(exam_id, str) and ObjectId.is_valid(exam_id) else exam_id
-            )
-        if subject_id:
-            match_filters["subject_id"] = (
-                ObjectId(subject_id) if isinstance(subject_id, str) and ObjectId.is_valid(subject_id) else subject_id
-            )
-        if chapter_id:
-            match_filters["chapter_id"] = (
-                ObjectId(chapter_id) if isinstance(chapter_id, str) and ObjectId.is_valid(chapter_id) else chapter_id
-            )
+        # ── Stage 0: Optional Filter Match (Shared Helper) ────────────────────
+        match_filter = _build_curriculum_match_filter(
+            exam_id=exam_id,
+            subject_id=subject_id,
+            chapter_id=chapter_id,
+        )
 
-        if match_filters:
-            pipeline.append({"$match": match_filters})
+        if match_filter:
+            pipeline.append({"$match": match_filter})
 
         # ── Stage 1: Group by question_id ─────────────────────────────────────
         # Accumulate total attempts, correct count, avg response time, and chapter_id.
