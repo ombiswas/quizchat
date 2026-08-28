@@ -87,9 +87,13 @@ def create_app() -> FastAPI:
     # Routers are registered here as each phase is built.
     from app.api.users import router as users_router
     from app.api.auth import router as auth_router
+    from app.api.exams import router as exams_router
+    from app.api.subjects import router as subjects_router
 
     application.include_router(users_router, prefix="/api")
     application.include_router(auth_router, prefix="/api")
+    application.include_router(exams_router, prefix="/api")
+    application.include_router(subjects_router, prefix="/api")
 
     return application
 

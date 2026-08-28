@@ -14,7 +14,13 @@ the data came from a simple find() or a ten-stage aggregation.
 """
 
 from app.repositories.user_repository import UserRepository
+from app.repositories.exam_repository import ExamRepository
+from app.repositories.subject_repository import SubjectRepository
+from app.repositories.chapter_repository import ChapterRepository
 
 __all__ = [
     "UserRepository",
+    "ExamRepository",
+    "SubjectRepository",
+    "ChapterRepository",
 ]

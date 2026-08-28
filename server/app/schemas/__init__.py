@@ -13,9 +13,17 @@ accept fields that get computed before storage.
 
 from app.schemas.user import UserResponse
 from app.schemas.auth import LoginRequest, TokenResponse
+from app.schemas.curriculum import (
+    ExamResponse,
+    SubjectResponse,
+    ChapterResponse,
+)
 
 __all__ = [
     "UserResponse",
     "LoginRequest",
     "TokenResponse",
+    "ExamResponse",
+    "SubjectResponse",
+    "ChapterResponse",
 ]

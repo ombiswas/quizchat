@@ -9,8 +9,10 @@ Motor queries or aggregation pipelines directly — that belongs in repositories
 
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
+from app.services.exam_service import CurriculumService
 
 __all__ = [
     "UserService",
     "AuthService",
+    "CurriculumService",
 ]
