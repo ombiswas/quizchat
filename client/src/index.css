@@ -1,0 +1,38 @@
+/*
+ * Global CSS entry point.
+ *
+ * The three @tailwind directives inject:
+ *   - base:       Tailwind's reset (Preflight)
+ *   - components: Any component classes from plugins
+ *   - utilities:  All utility classes (the bulk of Tailwind)
+ *
+ * Keep custom CSS to a minimum — prefer Tailwind utility classes in JSX.
+ * Place truly global overrides (e.g. scrollbar styling) below the directives.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Apply the ink background and default text colour to the whole document
+     so every page starts from the dark theme without needing per-element classes. */
+  html {
+    @apply bg-ink-950 text-white antialiased;
+  }
+
+  /* Smooth scrolling for the chat thread auto-scroll behaviour. */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  /* Reusable chat bubble shape — used by QuizScreen in Phase 5. */
+  .bubble-in {
+    @apply rounded-bubble rounded-tl-sm bg-ink-800 px-4 py-3 text-white;
+  }
+  .bubble-out {
+    @apply rounded-bubble rounded-tr-sm bg-accent px-4 py-3 text-ink-950 font-medium;
+  }
+}
