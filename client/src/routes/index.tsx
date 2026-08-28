@@ -20,8 +20,8 @@
 import { Suspense } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
-// Eager import for the placeholder — it's tiny and always the first load.
-import HomePage from '@/routes/HomePage'
+// Eager import for the login screen — always the first load.
+import LoginPage from '@/routes/LoginPage'
 
 import { AppShell } from '@/components/layout/AppShell'
 
@@ -54,7 +54,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <HomePage />,
+        element: <LoginPage />,
       },
       // Routes added here incrementally in Phase 5:
       // { path: '/exams', element: <ExamListPage /> },

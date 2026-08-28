@@ -1,8 +1,7 @@
-import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSessionStore } from '@/store/sessionStore'
 
-export const TopBar: React.FC = () => {
+export const TopBar = () => {
   const { user, isAuthenticated, logout } = useSessionStore()
   const location = useLocation()
   const navigate = useNavigate()
