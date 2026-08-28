@@ -16,11 +16,14 @@ from app.core.config import settings
 from app.models.question_attempt import QuestionAttempt
 from app.models.quiz import Quiz
 from app.repositories.chapter_repository import ChapterRepository
+from app.repositories.exam_repository import ExamRepository
 from app.repositories.question_attempt_repository import QuestionAttemptRepository
 from app.repositories.question_repository import QuestionRepository
 from app.repositories.quiz_repository import QuizRepository
+from app.repositories.subject_repository import SubjectRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
+    QuizResultResponse,
     QuizStartResponse,
     SubmitAnswerResponse,
 )
@@ -37,11 +40,15 @@ class QuizService:
         question_repo: QuestionRepository,
         chapter_repo: ChapterRepository,
         attempt_repo: QuestionAttemptRepository,
+        exam_repo: ExamRepository,
+        subject_repo: SubjectRepository,
     ):
         self.quiz_repo = quiz_repo
         self.question_repo = question_repo
         self.chapter_repo = chapter_repo
         self.attempt_repo = attempt_repo
+        self.exam_repo = exam_repo
+        self.subject_repo = subject_repo
 
     async def create_quiz(
         self,
@@ -310,4 +317,84 @@ class QuizService:
             is_correct=is_correct,
             correct_option=question.correct_option,
             next_question=next_client_q,
+        )
+
+    async def get_quiz_result(
+        self,
+        user_id: str | ObjectId,
+        quiz_id: str,
+    ) -> QuizResultResponse:
+        """
+        Fetch the final score summary and curriculum metadata for a completed quiz.
+
+        Guards:
+          - 404 if the quiz does not exist.
+          - 403 if the quiz belongs to another user.
+          - 409 if the quiz is still in progress (not completed).
+        """
+        # 1. Validate quiz exists
+        quiz = await self.quiz_repo.get_by_id(quiz_id)
+        if not quiz:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Quiz with id '{quiz_id}' not found.",
+            )
+
+        # 2. Ownership check
+        req_user_id_str = str(user_id)
+        quiz_user_id_str = str(quiz.user_id)
+        if req_user_id_str != quiz_user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to view results for this quiz.",
+            )
+
+        # 3. Completion check
+        if quiz.status != "completed":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Quiz is still in progress and has not been completed yet.",
+            )
+
+        # 4. Fetch curriculum names for display breadcrumb
+        exam = await self.exam_repo.get_by_id(quiz.exam_id)
+        subject = await self.subject_repo.get_by_id(quiz.subject_id)
+        chapter = await self.chapter_repo.get_by_id(quiz.chapter_id)
+
+        exam_name = exam.name if exam else "Unknown Exam"
+        subject_name = subject.name if subject else "Unknown Subject"
+        chapter_name = chapter.name if chapter else "Unknown Chapter"
+
+        # 5. Compute metrics
+        total_questions = len(quiz.question_ids)
+        accuracy_pct = (
+            round((quiz.score / total_questions) * 100, 2)
+            if total_questions > 0
+            else 0.0
+        )
+        total_time_taken_ms = 0
+        if quiz.completed_at and quiz.started_at:
+            total_time_taken_ms = max(
+                0, int((quiz.completed_at - quiz.started_at).total_seconds() * 1000)
+            )
+
+        completed_iso = (
+            quiz.completed_at.isoformat()
+            if quiz.completed_at
+            else datetime.now(timezone.utc).isoformat()
+        )
+
+        return QuizResultResponse(
+            quiz_id=str(quiz.id),
+            score=quiz.score,
+            total_questions=total_questions,
+            accuracy_pct=accuracy_pct,
+            total_time_taken_ms=total_time_taken_ms,
+            exam_id=str(quiz.exam_id),
+            exam_name=exam_name,
+            subject_id=str(quiz.subject_id),
+            subject_name=subject_name,
+            chapter_id=str(quiz.chapter_id),
+            chapter_name=chapter_name,
+            completed_at=completed_iso,
         )

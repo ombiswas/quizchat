@@ -92,3 +92,22 @@ class SubmitAnswerResponse(BaseModel):
         default=None,
         description="The next question in the thread, or null if the quiz is complete",
     )
+
+
+class QuizResultResponse(BaseModel):
+    """
+    Final summary result for a completed quiz.
+    """
+
+    quiz_id: str
+    score: int = Field(description="Total number of correctly answered questions")
+    total_questions: int = Field(description="Total questions in the quiz")
+    accuracy_pct: float = Field(description="Percentage of correct answers (0-100)")
+    total_time_taken_ms: int = Field(description="Total elapsed time in milliseconds")
+    exam_id: str
+    exam_name: str
+    subject_id: str
+    subject_name: str
+    chapter_id: str
+    chapter_name: str
+    completed_at: str = Field(description="ISO formatted completion timestamp")

@@ -9,12 +9,15 @@ from app.core.db import get_database
 from app.core.security import get_current_user
 from app.models.user import User
 from app.repositories.chapter_repository import ChapterRepository
+from app.repositories.exam_repository import ExamRepository
 from app.repositories.question_attempt_repository import QuestionAttemptRepository
 from app.repositories.question_repository import QuestionRepository
 from app.repositories.quiz_repository import QuizRepository
+from app.repositories.subject_repository import SubjectRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
     CreateQuizRequest,
+    QuizResultResponse,
     QuizStartResponse,
     SubmitAnswerRequest,
     SubmitAnswerResponse,
@@ -31,7 +34,16 @@ def get_quiz_service(
     question_repo = QuestionRepository(db)
     chapter_repo = ChapterRepository(db)
     attempt_repo = QuestionAttemptRepository(db)
-    return QuizService(quiz_repo, question_repo, chapter_repo, attempt_repo)
+    exam_repo = ExamRepository(db)
+    subject_repo = SubjectRepository(db)
+    return QuizService(
+        quiz_repo,
+        question_repo,
+        chapter_repo,
+        attempt_repo,
+        exam_repo,
+        subject_repo,
+    )
 
 
 @router.post(
@@ -92,4 +104,21 @@ async def submit_answer(
         quiz_id=quiz_id,
         question_id=request.question_id,
         selected_option=request.selected_option,
+    )
+
+
+@router.get(
+    "/{quiz_id}/result",
+    response_model=QuizResultResponse,
+    summary="Get final score and metrics summary for a completed quiz",
+    description="Returns the final score, accuracy %, total time, and curriculum display names for a completed quiz.",
+)
+async def get_quiz_result(
+    quiz_id: str,
+    current_user: User = Depends(get_current_user),
+    service: QuizService = Depends(get_quiz_service),
+) -> QuizResultResponse:
+    return await service.get_quiz_result(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
     )
