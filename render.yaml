@@ -35,5 +35,5 @@ services:
         source: "/*"
         destination: "/index.html"
     envVars:
-      - key: VITE_API_BASE_URL
+      - key: VITE_API_URL
         sync: false # e.g. https://quizchat-backend.onrender.com

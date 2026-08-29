@@ -12,6 +12,7 @@ QuizChat transforms test preparation into an intuitive, chat-first conversation 
 - [Tech Stack](#-tech-stack)
 - [Quick Start with Docker Compose](#-quick-start-with-docker-compose)
 - [Local Development Setup](#-local-development-setup)
+- [Deployment](#-deployment)
 - [Seed Dataset](#-seed-dataset)
 - [API Overview & Swagger Docs](#-api-overview--swagger-docs)
 - [Database Schema & Design Decisions](#-database-schema--design-decisions)
@@ -29,9 +30,10 @@ QuizChat transforms test preparation into an intuitive, chat-first conversation 
    - User choices render as outgoing right-aligned bubbles with instantaneous correctness badges (`✓ Correct` or `✕ Incorrect`).
    - Smooth auto-scrolling and Framer Motion spring transitions between question turns.
    - **Strict Irreversibility**: UI physically prevents going back or modifying previous answers, enforced server-side.
+   - **Chat Refresh Resilience**: `previous_attempts` payload enables frontend to reconstruct chat history on page refresh without data loss.
 
 2. **Immutable Event Log Architecture**:
-   - Every single question attempt is logged as an independent, 11-field document in `question_attempts`.
+   - Every single question attempt is logged as an independent, 12-field document in `question_attempts`.
    - Server-side duration tracking: `response_duration_ms = answer_submitted_at - question_shown_at`.
    - Optimized with compound B-Tree indexes for high-throughput OLAP aggregation pipelines.
 
@@ -40,16 +42,21 @@ QuizChat transforms test preparation into an intuitive, chat-first conversation 
    - **Fatigue Drop-off Analysis**: Aggregates question-sequence buckets (`1-5`, `6-10`, `11-15`...) using `$bucket` to visualize cognitive stamina degradation and response latency trends.
    - **Question Difficulty Index (QDI)**: Ranks hardest curriculum problems by weighting low accuracy (60%) and high attempt duration (40%).
 
+4. **Anti-Cheat & Quiz Integrity**:
+   - `correct_option` is stripped from all client-facing question responses; only revealed in `SubmitAnswerResponse` after the answer is committed.
+   - Out-of-order / skipping protection: submitting for the wrong question ID returns `409 Conflict`.
+   - Inactivity timeout: quiz auto-abandons after 10 minutes of inactivity.
+
 ---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology | Key Libraries / Features |
 |---|---|---|
-| **Frontend** | React 18 + Vite 5 + TypeScript | TanStack Query v5, Zustand v5, Framer Motion v11, Recharts v2, Tailwind CSS |
-| **Backend** | Python 3.11+ / 3.14 + FastAPI | Pydantic v2, Motor (AsyncIOMotorClient), PyJWT, AnyIO |
-| **Database** | MongoDB 7.0 | Compound Indexes, Aggregation Pipeline, `$setWindowFields`, `$bucket` |
-| **Testing** | Pytest 8 + Pytest-Asyncio | TestClient, Mathematical unit tests, Full E2E lifecycle test suite |
+| **Frontend** | React 18 + Vite 5 + TypeScript | TanStack Query v5, Zustand v5, Framer Motion v11, Recharts v2, Tailwind CSS, React Router v6 |
+| **Backend** | Python 3.12+ / FastAPI | Pydantic v2, Motor (AsyncIOMotorClient), PyJWT (python-jose), AnyIO |
+| **Database** | MongoDB 7.0 | Compound Indexes, Aggregation Pipeline, `$setWindowFields`, `$bucket`, `$sample` |
+| **Testing** | Pytest 8 + Pytest-Asyncio | In-memory async MongoDB mocks, mathematical unit tests, full E2E lifecycle test suite |
 | **Containerization** | Docker & Docker Compose | Multi-container composition with automated healthchecks |
 
 ---
@@ -87,11 +94,11 @@ docker-compose run --rm seed
 
 This seeds:
 - **50 Synthetic Learners** (Indian competitive exam student personas)
-- **3 Competitive Exam Tracks** (JEE Advanced, NEET-UG, UPSC Prelims)
-- **10 Subject Disciplines** (Physics, Chemistry, Mathematics, Botany, Zoology, Indian Polity, Modern History, etc.)
-- **30 Syllabus Chapters** (10 chapters per exam track)
+- **3 Competitive Exam Tracks** (JEE Main, NEET UG, UPSC CSE)
+- **11 Subject Disciplines** (Physics, Chemistry, Mathematics, Botany, Zoology, Human Physiology, Physical Chemistry, Indian Polity, Modern Indian History, Economics, Geography)
+- **30 Syllabus Chapters** distributed across subjects
 - **500 High-Quality Multiple-Choice Questions** with realistic distractor options
-- **1,500+ Historical Question Attempts** with realistic response times and fatigue distributions for instant analytics
+- **~50 Completed Quiz Sessions & ~750 Historical Question Attempts** with realistic response times and fatigue distributions for instant analytics
 
 ---
 
@@ -109,31 +116,76 @@ This seeds:
 
 ## 💻 Local Development Setup (Without Docker)
 
+### Prerequisites
+- Python 3.12+ (managed via [uv](https://docs.astral.sh/uv/) recommended)
+- Node.js 20+ & npm
+- MongoDB running locally or a [MongoDB Atlas](https://cloud.mongodb.com) free cluster
+
 ### Backend Setup
 
 ```bash
 cd server
-python3 -m venv .venv
-source .venv/bin/activate
+
+# Using uv (recommended)
+uv venv
+uv pip install --pre -r requirements.txt
+
+# Or using pip
+python -m venv .venv
+source .venv/bin/activate    # Linux/macOS
+.venv\Scripts\activate       # Windows
 pip install -r requirements.txt
 
-# Run MongoDB locally (e.g. brew services start mongodb-community or docker run -p 27017:27017 mongo:7.0)
+# Configure environment
 cp .env.example .env
+# Edit .env — set MONGO_URI to your local MongoDB or Atlas connection string
 
 # Run seeder
-python -m app.scripts.seed_data
+uv run python -m app.scripts.seed_data        # with uv
+python -m app.scripts.seed_data               # with pip
 
 # Start backend server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # with uv
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload          # with pip
 ```
 
 ### Frontend Setup
 
 ```bash
 cd client
+cp .env.example .env
 npm install
 npm run dev
 ```
+
+---
+
+## 🚢 Deployment
+
+### Recommended Free-Tier Stack
+
+| Component | Platform | Config |
+|---|---|---|
+| **Backend** | [Render](https://render.com) | Free Web Service — see [`render.yaml`](render.yaml) |
+| **Frontend** | [Vercel](https://vercel.com) | Free Static Hosting — see [`vercel.json`](client/vercel.json) |
+| **Database** | [MongoDB Atlas](https://cloud.mongodb.com) | Free M0 Cluster (512 MB) |
+
+### Backend on Render
+
+1. Connect your GitHub repo on [Render](https://render.com)
+2. Set **Root Directory** to `server`
+3. Build Command: `pip install -r requirements.txt`
+4. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Add environment variables: `MONGO_URI`, `MONGO_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRE_MINUTES`, `FRONTEND_ORIGIN`
+
+### Frontend on Vercel
+
+1. Import your repo on [Vercel](https://vercel.com)
+2. Set **Root Directory** to `client`
+3. Framework Preset: **Vite**
+4. Add environment variable: `VITE_API_URL` = your Render backend URL
+
+> **Note**: Render's free tier spins down after 15 minutes of inactivity; cold starts take ~30–50 seconds.
 
 ---
 
@@ -144,6 +196,7 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
 ### 1. Authentication & Users
 - `GET /api/users` — Returns list of seeded user profiles for contact-list login.
 - `POST /api/auth/login` — Issues a JWT token given `{ user_id }`.
+- `GET /api/auth/me` — Returns profile of current authenticated user (requires Bearer JWT).
 
 ### 2. Curriculum Navigation
 - `GET /api/exams` — List all examination tracks.
@@ -152,15 +205,16 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
 
 ### 3. Adaptive Quiz Engine
 - `POST /api/quizzes` — Starts a 15-question quiz session for a given `{ chapter_id }`. Samples questions using MongoDB `$sample`.
-- `GET /api/quizzes/{quiz_id}/current-question` — Fetches current question without `correct_option` and stamps `question_shown_at`.
-- `POST /api/quizzes/{quiz_id}/submit` — Submits `{ question_id, selected_option }`, computes response duration, writes to `question_attempts`, increments quiz state, and returns immediate feedback.
-- `GET /api/quizzes/{quiz_id}/result` — Returns final score, accuracy %, total elapsed duration, and curriculum names.
+- `GET /api/quizzes/{quiz_id}/current-question` — Fetches current question without `correct_option`, stamps `question_shown_at`, and includes `previous_attempts` for chat restoration on refresh.
+- `POST /api/quizzes/{quiz_id}/submit` — Submits `{ question_id, selected_option }`, computes response duration, writes to `question_attempts`, increments quiz state, and returns immediate feedback with the next question.
+- `POST /api/quizzes/{quiz_id}/abandon` — Explicitly terminates an in-progress quiz session early, preventing future resumption.
+- `GET /api/quizzes/{quiz_id}/result` — Returns final score, accuracy %, total elapsed duration, curriculum names, and question-by-question attempt breakdown.
 
 ### 4. Analytical Intelligence
 - `GET /api/analytics/learning-velocity` — Computes global Learning Velocity Index leaderboard with `$setWindowFields`.
 - `GET /api/analytics/fatigue` — Computes accuracy drop-off and pacing across question buckets (supports `?user_id=` and `?quiz_id=`).
 - `GET /api/analytics/question-difficulty` — Computes Question Difficulty Index ranking.
-- *Optional shared curriculum filters*: All analytics endpoints support `?exam_id=`, `?subject_id=`, and `?chapter_id=`.
+- *Shared curriculum filters*: All analytics endpoints support `?exam_id=`, `?subject_id=`, and `?chapter_id=`.
 
 ---
 
@@ -170,7 +224,7 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
 
 ```
 +----------------+       +------------------+       +-----------------+
-|     Exams      | <----+|     Subjects     | <----+|    Chapters     |
+|     Exams      | <----|     Subjects     | <----|    Chapters     |
 +----------------+       +------------------+       +-----------------+
                                                              |
                                                              v
@@ -191,7 +245,7 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
    - **BSON 16MB Limit & Array Growth**: Embedding hundreds of attempts inside user or quiz documents causes unbounded document growth, fragmentation, and memory reallocations.
    - **High Write Throughput**: Appending a new attempt document is an $O(1)$ isolated write without document-level write locking on large parent objects.
    - **Aggregation Pipeline Efficiency**: Running analytical aggregation pipelines directly on a flat collection avoids expensive `$unwind` stages, reducing CPU and memory overhead during multi-stage analytics.
-   - **Compound Indexing**: Enables targeted compound indexes (`user_id + answer_submitted_at`, `question_id + is_correct`, `chapter_id + question_index_in_quiz`) that allow index-covered queries.
+   - **Compound Indexing**: Enables targeted compound indexes that allow index-covered queries.
 
 2. **Why Options are Embedded in `questions`**:
    - Options are strictly bounded (always 4 per question).
@@ -202,15 +256,15 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
 
 ### The 7 Collections & Index Specifications
 
-| Collection | Schema Description | Primary Indexes |
+| Collection | Schema Description | Indexes |
 |---|---|---|
 | `users` | `name`, `created_at` | `_id` |
-| `exams` | `name`, `description` | `_id`, `name` |
-| `subjects` | `exam_id`, `name` | `_id`, `exam_id + name` |
-| `chapters` | `exam_id`, `subject_id`, `name` | `_id`, `subject_id + name`, `exam_id` |
-| `questions` | `exam_id`, `subject_id`, `chapter_id`, `text`, `options: [key, text]`, `correct_option` | `_id`, `chapter_id`, `subject_id`, `exam_id` |
-| `quizzes` | `user_id`, `chapter_id`, `exam_id`, `subject_id`, `question_ids`, `current_index`, `score`, `status`, `current_question_shown_at`, `started_at`, `completed_at` | `_id`, `user_id + started_at`, `chapter_id` |
-| `question_attempts` | **All 11 Fields**: `user_id`, `quiz_id`, `question_id`, `exam_id`, `subject_id`, `chapter_id`, `question_index_in_quiz`, `question_shown_at`, `answer_submitted_at`, `response_duration_ms`, `selected_option`, `is_correct` | `user_id + answer_submitted_at`, `question_id + is_correct`, `quiz_id + question_index_in_quiz`, `chapter_id` |
+| `exams` | `name`, `description` | `_id`, `name` (unique) |
+| `subjects` | `exam_id`, `name` | `_id`, `exam_id` |
+| `chapters` | `exam_id`, `subject_id`, `name` | `_id`, `exam_id`, `subject_id` |
+| `questions` | `exam_id`, `subject_id`, `chapter_id`, `text`, `options: [key, text]`, `correct_option`, `created_at` | `_id`, `chapter_id` |
+| `quizzes` | `user_id`, `chapter_id`, `exam_id`, `subject_id`, `question_ids`, `current_index`, `score`, `status` (`in_progress` / `completed` / `abandoned`), `current_question_shown_at`, `started_at`, `completed_at` | `_id`, `user_id + status` |
+| `question_attempts` | **All 12 Fields**: `user_id`, `quiz_id`, `question_id`, `exam_id`, `subject_id`, `chapter_id`, `question_index_in_quiz`, `question_shown_at`, `answer_submitted_at`, `response_duration_ms`, `selected_option`, `is_correct` | `user_id`, `question_id`, `quiz_id + question_index_in_quiz`, `user_id + quiz_id` |
 
 ---
 
@@ -225,16 +279,16 @@ $$\text{LVI} = 0.5 \cdot \text{Norm}(\text{Accuracy}) + 0.3 \cdot \text{Norm}(\t
 #### Consistency Score Formula:
 To ensure scale-independence across varied question lengths, consistency is derived from the Coefficient of Variation ($CV = \frac{\sigma}{\mu}$):
 
-$$\text{Consistency} = \max\left(0,\, 1 - \frac{\sigma_{\text{duration}}}{\mu_{\text{duration}}}\right)$$
+$$\text{Consistency} = \frac{1}{1 + CV} = \frac{1}{1 + \frac{\sigma_{\text{duration}}}{\mu_{\text{duration}}}}$$
 
 *Where:*
 - $\sigma_{\text{duration}}$ is the population standard deviation (`$stdDevPop`) of response times.
 - $\mu_{\text{duration}}$ is the average response duration (`$avg`).
 - A learner with perfectly uniform pacing scores $1.0$, while erratic pacing degrades toward $0.0$.
 
-#### Pipeline Stages in [`repositories/analytics_repository.py`](file:///home/ombiswas/Projects/quizchat/server/app/repositories/analytics_repository.py):
+#### Pipeline Stages in [`analytics_repository.py`](server/app/repositories/analytics_repository.py):
 1. **`$match`**: Optional pre-filter on `exam_id`, `subject_id`, `chapter_id`.
-2. **`$group`**: Aggregate per `user_id` $\rightarrow$ `total_attempts`, `correct_count`, `avg_time`, `std_dev_time`.
+2. **`$group`**: Aggregate per `user_id` → `total_attempts`, `correct_count`, `avg_time`, `std_dev_time`.
 3. **`$project`**: Compute raw accuracy and CV consistency score.
 4. **`$setWindowFields`**: Compute global minimums and maximums across all learners without leaving the aggregation pipeline.
 5. **`$project`**: Min-max normalize accuracy, speed ($1 - \text{norm\_time}$ since faster is better), and consistency into the $0.5 / 0.3 / 0.2$ weighted composite index.
@@ -272,16 +326,19 @@ The project includes an automated test suite verifying both the mathematical cor
 ### Running Tests
 
 ```bash
-# Backend pytest suite
-pytest -v server/tests/
+# Backend pytest suite (from project root)
+cd server
+uv run pytest -v tests/
 
 # Frontend type check & build
-cd client && npm run build
+cd client
+npm run type-check
+npm run build
 ```
 
 ### Test Coverage Highlights:
-- **Mathematical Correctness ([`test_analytics.py`](file:///home/ombiswas/Projects/quizchat/server/tests/test_analytics.py))**: Hand-calculated assertion suite verifying population stdDev, coefficient-of-variation consistency, min-max normalization, LVI weights, and QDI scoring against deterministic test records.
-- **Full E2E Lifecycle Flow ([`test_e2e_flow.py`](file:///home/ombiswas/Projects/quizchat/server/tests/test_e2e_flow.py))**: Simulates complete journey: List Users $\rightarrow$ Login JWT $\rightarrow$ Browse Exam/Subject/Chapter $\rightarrow$ Create Quiz $\rightarrow$ 15 Sequential Question Submissions $\rightarrow$ Verify 11-field Attempt Documents $\rightarrow$ Verify Result Summary.
+- **Mathematical Correctness ([`test_analytics.py`](server/tests/test_analytics.py))**: Hand-calculated assertion suite verifying population stdDev, coefficient-of-variation consistency, min-max normalization, LVI weights, and QDI scoring against deterministic test records.
+- **Full E2E Lifecycle Flow ([`test_e2e_flow.py`](server/tests/test_e2e_flow.py))**: Simulates complete journey: List Users → Login JWT → Browse Exam/Subject/Chapter → Create Quiz → 15 Sequential Question Submissions → Verify Attempt Documents → Verify Result Summary. Uses in-memory async MongoDB mocks.
 
 ---
 
@@ -289,9 +346,11 @@ cd client && npm run build
 
 1. **Fixed Quiz Length**: Every generated quiz currently samples exactly 15 questions per chapter.
 2. **Strict Irreversibility**: Consistent with competitive exam test-taking patterns and server-side duration logging, learners cannot return to previous questions or modify past answers.
-3. **Consistency Scope**: Consistency of response time is evaluated across a user's aggregate attempt history for statistical stability (since single-quiz sample sizes of 15 questions have higher variance).
-4. **JWT Authentication**: Built as a zero-friction demo auth flow (user selects from 50 seeded candidate profiles without passwords). In a multi-tenant production environment, this would be replaced with OAuth2/OIDC or Argon2 password hashing.
-5. **Analytics Pagination**: Analytics leaderboards return all active ranked learners and questions. For datasets exceeding 10,000 active users, cursor-based pagination and pre-aggregated materialized views (`$merge`) would be introduced.
+3. **Inactivity Timeout**: Quiz sessions are automatically abandoned after 10 minutes of inactivity.
+4. **Consistency Scope**: Consistency of response time is evaluated across a user's aggregate attempt history for statistical stability (since single-quiz sample sizes of 15 questions have higher variance).
+5. **JWT Authentication**: Built as a zero-friction demo auth flow (user selects from 50 seeded candidate profiles without passwords). In a multi-tenant production environment, this would be replaced with OAuth2/OIDC or Argon2 password hashing.
+6. **Analytics Pagination**: Analytics leaderboards return all active ranked learners and questions. For datasets exceeding 10,000 active users, cursor-based pagination and pre-aggregated materialized views (`$merge`) would be introduced.
+7. **Render Cold Start**: On Render's free tier, the backend spins down after 15 minutes of inactivity and takes ~30–50 seconds to cold-start on the next request.
 
 ---
 
