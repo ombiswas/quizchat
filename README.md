@@ -251,7 +251,7 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
    - Options are strictly bounded (always 4 per question).
    - They are always read atomically with the question text and never updated independently.
 
-3. **Why Curriculum is Normalized (`exams` $\rightarrow$ `subjects` $\rightarrow$ `chapters`)**:
+3. **Why Curriculum is Normalized (`exams` → `subjects` → `chapters`)**:
    - Supports intuitive three-level hierarchical drill-down and curriculum filtering without redundant text replication.
 
 ### The 7 Collections & Index Specifications
@@ -274,25 +274,30 @@ Interactive OpenAPI documentation is live at `http://localhost:8000/docs`.
 
 Learning Velocity quantifies a learner's mastery speed and consistency across quizzes.
 
-$$\text{LVI} = 0.5 \cdot \text{Norm}(\text{Accuracy}) + 0.3 \cdot \text{Norm}(\text{Inverted Avg Duration}) + 0.2 \cdot \text{Norm}(\text{Consistency})$$
+$$
+\text{LVI} = 0.5 \cdot \text{Norm}(\text{Accuracy}) + 0.3 \cdot \text{Norm}(\text{Inverted Avg Duration}) + 0.2 \cdot \text{Norm}(\text{Consistency})
+$$
 
 #### Consistency Score Formula:
-To ensure scale-independence across varied question lengths, consistency is derived from the Coefficient of Variation ($CV = \frac{\sigma}{\mu}$):
 
-$$\text{Consistency} = \frac{1}{1 + CV} = \frac{1}{1 + \frac{\sigma_{\text{duration}}}{\mu_{\text{duration}}}}$$
+To ensure scale-independence across varied question lengths, consistency is derived from the Coefficient of Variation ( $CV = \sigma / \mu$ ):
+
+$$
+\text{Consistency} = \frac{1}{1 + CV} = \frac{1}{1 + \dfrac{\sigma_{\text{duration}}}{\mu_{\text{duration}}}}
+$$
 
 *Where:*
-- $\sigma_{\text{duration}}$ is the population standard deviation (`$stdDevPop`) of response times.
-- $\mu_{\text{duration}}$ is the average response duration (`$avg`).
-- A learner with perfectly uniform pacing scores $1.0$, while erratic pacing degrades toward $0.0$.
+- $\sigma_{\text{duration}}$ is the population standard deviation (`\$stdDevPop`) of response times.
+- $\mu_{\text{duration}}$ is the average response duration (`\$avg`).
+- A learner with perfectly uniform pacing scores 1.0, while erratic pacing degrades toward 0.0.
 
 #### Pipeline Stages in [`analytics_repository.py`](server/app/repositories/analytics_repository.py):
-1. **`$match`**: Optional pre-filter on `exam_id`, `subject_id`, `chapter_id`.
-2. **`$group`**: Aggregate per `user_id` → `total_attempts`, `correct_count`, `avg_time`, `std_dev_time`.
-3. **`$project`**: Compute raw accuracy and CV consistency score.
-4. **`$setWindowFields`**: Compute global minimums and maximums across all learners without leaving the aggregation pipeline.
-5. **`$project`**: Min-max normalize accuracy, speed ($1 - \text{norm\_time}$ since faster is better), and consistency into the $0.5 / 0.3 / 0.2$ weighted composite index.
-6. **`$lookup` & `$sort`**: Join `users` for name display and sort descending by `learning_velocity_index`.
+1. **`\$match`**: Optional pre-filter on `exam_id`, `subject_id`, `chapter_id`.
+2. **`\$group`**: Aggregate per `user_id` → `total_attempts`, `correct_count`, `avg_time`, `std_dev_time`.
+3. **`\$project`**: Compute raw accuracy and CV consistency score.
+4. **`\$setWindowFields`**: Compute global minimums and maximums across all learners without leaving the aggregation pipeline.
+5. **`\$project`**: Min-max normalize accuracy, speed ( $1 - \text{norm\\_time}$ since faster is better), and consistency into the 0.5 / 0.3 / 0.2 weighted composite index.
+6. **`\$lookup` & `\$sort`**: Join `users` for name display and sort descending by `learning_velocity_index`.
 
 ---
 
@@ -301,9 +306,9 @@ $$\text{Consistency} = \frac{1}{1 + CV} = \frac{1}{1 + \frac{\sigma_{\text{durat
 Quantifies cognitive stamina drop-off and mental pacing degradation as a learner advances through consecutive question indices.
 
 #### Pipeline Stages:
-1. **`$match`**: Optional filter on `user_id`, `quiz_id`, or curriculum track.
-2. **`$bucket`**: Partitions `question_index_in_quiz` into non-overlapping sequential boundaries `[0, 5, 10, 15, ...]`. Boundaries are dynamically computed based on the maximum question index present.
-3. **`$project`**: Computes average accuracy (`$avg: "$is_correct"`) and average response time (`$avg: "$response_duration_ms"`) per bucket.
+1. **`\$match`**: Optional filter on `user_id`, `quiz_id`, or curriculum track.
+2. **`\$bucket`**: Partitions `question_index_in_quiz` into non-overlapping sequential boundaries `[0, 5, 10, 15, ...]`. Boundaries are dynamically computed based on the maximum question index present.
+3. **`\$project`**: Computes average accuracy (`\$avg: "\$is_correct"`) and average response time (`\$avg: "\$response_duration_ms"`) per bucket.
 4. **Output format**: Formatted bucket ranges (e.g. `"1-5"`, `"6-10"`, `"11-15"`).
 
 ---
@@ -312,10 +317,12 @@ Quantifies cognitive stamina drop-off and mental pacing degradation as a learner
 
 Identifies curriculum problems that present high cognitive friction across all attempts.
 
-$$\text{QDI} = 0.6 \cdot (1 - \text{Norm}(\text{Accuracy})) + 0.4 \cdot \text{Norm}(\text{Avg Duration})$$
+$$
+\text{QDI} = 0.6 \cdot (1 - \text{Norm}(\text{Accuracy})) + 0.4 \cdot \text{Norm}(\text{Avg Duration})
+$$
 
 - Questions with low accuracy and high response latency receive higher difficulty scores.
-- Utilizes `$setWindowFields` for global dataset normalization and joins the syllabus chapter name for display.
+- Utilizes `\$setWindowFields` for global dataset normalization and joins the syllabus chapter name for display.
 
 ---
 
