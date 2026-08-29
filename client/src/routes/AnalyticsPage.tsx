@@ -3,14 +3,15 @@
  *
  * Handcrafted performance & cognitive analytics dashboard.
  * - Container width strictly matched to navbar (max-w-4xl) for uniform layout.
+ * - Clean vertical breathing room and dedicated tab navigation.
  * - 1. Learning Velocity Index (LVI) ranked leaderboard with logged-in user highlight.
  * - 2. Fatigue Analysis interactive dual-axis Recharts visualization (My vs Overall cohort).
- * - 3. Question Difficulty Index sortable ranking with underlying performance dimensions.
+ * - 3. Question Difficulty Index with full unclamped question statements and structured performance cards.
  */
 
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -132,54 +133,55 @@ export default function AnalyticsPage() {
   return (
     <div className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start space-y-6">
       {/* ── Page Header ───────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-ink-800/80">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-ink-400 mb-0.5">
-            <span>Analytics</span>
-            <span>/</span>
-            <span className="text-accent font-semibold">Cognitive Diagnostics</span>
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink-100 tracking-tight">
-            Performance Analytics
-          </h1>
-          <p className="text-xs sm:text-sm text-ink-400 mt-0.5">
-            Velocity metrics, mental fatigue tracking, and question difficulty index.
-          </p>
+      <div className="space-y-1.5 pb-2">
+        <div className="flex items-center gap-2 text-xs font-mono text-ink-400">
+          <span className="h-2 w-2 rounded-full bg-accent" />
+          <span className="text-accent font-semibold uppercase tracking-wider">
+            Cognitive Diagnostics
+          </span>
         </div>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink-100 tracking-tight">
+          Performance & Analytics
+        </h1>
+        <p className="text-xs sm:text-sm text-ink-400 max-w-2xl">
+          Multi-dimensional analytics measuring learning velocity, cognitive fatigue curves, and question difficulty indexes.
+        </p>
+      </div>
 
-        {/* Navigation Tab Pills */}
-        <div className="flex items-center bg-ink-900 p-1.5 rounded-xl border border-ink-800 self-start sm:self-auto shrink-0 font-mono text-xs">
-          <button
-            onClick={() => setActiveTab('leaderboard')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              activeTab === 'leaderboard'
-                ? 'bg-accent text-ink-950 font-bold shadow-glow'
-                : 'text-ink-300 hover:text-white'
-            }`}
-          >
-            Velocity Leaderboard
-          </button>
-          <button
-            onClick={() => setActiveTab('fatigue')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              activeTab === 'fatigue'
-                ? 'bg-accent text-ink-950 font-bold shadow-glow'
-                : 'text-ink-300 hover:text-white'
-            }`}
-          >
-            Fatigue Curve
-          </button>
-          <button
-            onClick={() => setActiveTab('difficulty')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              activeTab === 'difficulty'
-                ? 'bg-accent text-ink-950 font-bold shadow-glow'
-                : 'text-ink-300 hover:text-white'
-            }`}
-          >
-            Question Difficulty
-          </button>
-        </div>
+      {/* ── Segmented Navigation Tabs ──────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-2 bg-ink-900/90 p-1.5 rounded-2xl border border-ink-800 shadow-sm backdrop-blur-xl">
+        <button
+          onClick={() => setActiveTab('leaderboard')}
+          className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'leaderboard'
+              ? 'bg-accent text-ink-950 font-bold shadow-sm'
+              : 'text-ink-300 hover:text-white hover:bg-ink-800/60'
+          }`}
+        >
+          <span>Velocity Leaderboard</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('fatigue')}
+          className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'fatigue'
+              ? 'bg-accent text-ink-950 font-bold shadow-sm'
+              : 'text-ink-300 hover:text-white hover:bg-ink-800/60'
+          }`}
+        >
+          <span>Fatigue Curve</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('difficulty')}
+          className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'difficulty'
+              ? 'bg-accent text-ink-950 font-bold shadow-sm'
+              : 'text-ink-300 hover:text-white hover:bg-ink-800/60'
+          }`}
+        >
+          <span>Question Difficulty</span>
+        </button>
       </div>
 
       {/* ───────────────────────────────────────────────────────────────── */}
@@ -190,26 +192,23 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="bg-ink-900/90 rounded-2xl border border-ink-800 shadow-xl overflow-hidden backdrop-blur-xl"
+          className="bg-ink-900/90 rounded-2xl border border-ink-800 shadow-xl overflow-hidden backdrop-blur-xl flex flex-col"
         >
           {/* Section Toolbar */}
-          <div className="p-4 sm:p-5 border-b border-ink-800 bg-ink-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-base sm:text-lg font-bold text-ink-100 flex items-center gap-2">
-                <span>Learning Velocity Index (LVI)</span>
-                <span className="text-xs font-mono font-normal text-ink-400">
-                  (Accuracy × Speed × Consistency)
-                </span>
+          <div className="p-4 sm:p-5 border-b border-ink-800 bg-ink-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <h2 className="font-display text-base sm:text-lg font-bold text-ink-100">
+                Learning Velocity Index (LVI)
               </h2>
-              <p className="text-xs text-ink-400 mt-0.5">
-                Composite metric rating fast, accurate, and consistent problem solvers
+              <p className="text-xs text-ink-400">
+                Formula: <span className="font-mono text-accent">Accuracy × Speed × Consistency</span>
               </p>
             </div>
 
             {/* Search Input */}
             <div className="relative w-full sm:max-w-xs flex items-center">
               <svg
-                className="absolute left-3.5 h-3.5 w-3.5 text-ink-400 pointer-events-none"
+                className="absolute left-3.5 h-4 w-4 text-ink-400 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -226,12 +225,12 @@ export default function AnalyticsPage() {
                 value={leaderboardSearch}
                 onChange={(e) => setLeaderboardSearch(e.target.value)}
                 placeholder="Search ranked learners..."
-                className="w-full rounded-xl bg-ink-900 border border-ink-700/80 pl-9 pr-8 py-2 text-xs text-ink-100 placeholder-ink-400 focus:border-accent focus:outline-none transition-all font-sans"
+                className="w-full rounded-xl bg-ink-900 border border-ink-700/80 pl-10 pr-9 py-2.5 text-xs sm:text-sm text-ink-100 placeholder-ink-400 focus:border-accent focus:outline-none transition-all font-sans"
               />
               {leaderboardSearch && (
                 <button
                   onClick={() => setLeaderboardSearch('')}
-                  className="absolute right-2.5 text-ink-400 hover:text-ink-200 text-xs"
+                  className="absolute right-3 text-ink-400 hover:text-ink-200 text-xs"
                 >
                   ✕
                 </button>
@@ -241,32 +240,32 @@ export default function AnalyticsPage() {
 
           {/* Leaderboard Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse">
               <thead>
-                <tr className="border-b border-ink-800 bg-ink-950/70 text-ink-400 uppercase font-mono text-[10px] tracking-wider">
-                  <th className="py-3 px-4 w-14 text-center">Rank</th>
-                  <th className="py-3 px-4">Learner</th>
-                  <th className="py-3 px-4 text-right">Accuracy</th>
-                  <th className="py-3 px-4 text-right">Avg Response</th>
-                  <th className="py-3 px-4 text-right">Consistency</th>
-                  <th className="py-3 px-4 text-right">LVI Score</th>
+                <tr className="border-b border-ink-800 bg-ink-950/70 text-ink-400 uppercase font-mono text-[10px] sm:text-[11px] tracking-wider">
+                  <th className="py-3.5 px-5 w-16 text-center">Rank</th>
+                  <th className="py-3.5 px-5">Learner Profile</th>
+                  <th className="py-3.5 px-5 text-right">Accuracy</th>
+                  <th className="py-3.5 px-5 text-right">Avg Response</th>
+                  <th className="py-3.5 px-5 text-right">Consistency</th>
+                  <th className="py-3.5 px-5 text-right">LVI Score</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ink-800/60">
+              <tbody className="divide-y divide-ink-800/60 font-sans">
                 {isLoadingLVI ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td className="py-3.5 px-4 text-center"><div className="h-4 w-6 bg-ink-800 rounded mx-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-32 bg-ink-800 rounded" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-14 bg-ink-800 rounded ml-auto" /></td>
+                      <td className="py-4 px-5 text-center"><div className="h-4 w-6 bg-ink-800 rounded mx-auto" /></td>
+                      <td className="py-4 px-5"><div className="h-4 w-36 bg-ink-800 rounded" /></td>
+                      <td className="py-4 px-5"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
+                      <td className="py-4 px-5"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
+                      <td className="py-4 px-5"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
+                      <td className="py-4 px-5"><div className="h-4 w-14 bg-ink-800 rounded ml-auto" /></td>
                     </tr>
                   ))
                 ) : filteredLVI.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-ink-400 font-sans">
+                    <td colSpan={6} className="py-12 text-center text-ink-400">
                       No matching learners found on leaderboard.
                     </td>
                   </tr>
@@ -278,33 +277,39 @@ export default function AnalyticsPage() {
                     return (
                       <tr
                         key={item.user_id}
-                        className={`transition-colors font-sans ${
+                        className={`transition-colors ${
                           isCurrentUser
-                            ? 'bg-accent/10 hover:bg-accent/15 border-l-2 border-accent'
+                            ? 'bg-accent/10 hover:bg-accent/15 border-l-4 border-accent'
                             : 'hover:bg-ink-850/50'
                         }`}
                       >
                         {/* Rank */}
-                        <td className="py-3.5 px-4 text-center font-mono font-bold">
+                        <td className="py-4 px-5 text-center font-mono font-bold">
                           {rank === 1 ? (
-                            <span className="text-amber-400 font-bold">#1</span>
+                            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs">
+                              #1
+                            </span>
                           ) : rank === 2 ? (
-                            <span className="text-slate-300 font-bold">#2</span>
+                            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-slate-400/20 text-slate-200 border border-slate-400/30 text-xs">
+                              #2
+                            </span>
                           ) : rank === 3 ? (
-                            <span className="text-amber-600 font-bold">#3</span>
+                            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-700/20 text-amber-500 border border-amber-700/30 text-xs">
+                              #3
+                            </span>
                           ) : (
                             <span className="text-ink-400 font-normal">#{rank}</span>
                           )}
                         </td>
 
                         {/* User Name */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-2.5">
                             <span className="font-semibold text-ink-100">
                               {item.user_name}
                             </span>
                             {isCurrentUser && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-accent text-ink-950">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-accent text-ink-950">
                                 YOU
                               </span>
                             )}
@@ -312,22 +317,22 @@ export default function AnalyticsPage() {
                         </td>
 
                         {/* Accuracy */}
-                        <td className="py-3.5 px-4 text-right font-mono text-ink-200">
+                        <td className="py-4 px-5 text-right font-mono text-ink-200">
                           {(item.accuracy * 100).toFixed(1)}%
                         </td>
 
                         {/* Avg Duration */}
-                        <td className="py-3.5 px-4 text-right font-mono text-ink-300">
+                        <td className="py-4 px-5 text-right font-mono text-ink-300">
                           {(item.avg_response_time_ms / 1000).toFixed(2)}s
                         </td>
 
                         {/* Consistency */}
-                        <td className="py-3.5 px-4 text-right font-mono text-ink-300">
+                        <td className="py-4 px-5 text-right font-mono text-ink-300">
                           {item.consistency_score.toFixed(2)}
                         </td>
 
                         {/* LVI Metric */}
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-accent">
+                        <td className="py-4 px-5 text-right font-mono font-bold text-accent">
                           {item.learning_velocity_index.toFixed(2)}
                         </td>
                       </tr>
@@ -348,16 +353,16 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="bg-ink-900/90 rounded-2xl border border-ink-800 shadow-xl overflow-hidden backdrop-blur-xl p-5 sm:p-6 space-y-6"
+          className="bg-ink-900/90 rounded-2xl border border-ink-800 shadow-xl overflow-hidden backdrop-blur-xl p-5 sm:p-7 space-y-6"
         >
-          {/* Control Bar */}
+          {/* Header & Mode Switch */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-ink-800">
-            <div>
+            <div className="space-y-0.5">
               <h2 className="font-display text-base sm:text-lg font-bold text-ink-100">
                 Cognitive Fatigue & Accuracy Progression
               </h2>
-              <p className="text-xs text-ink-400 mt-0.5">
-                Observe accuracy drops and latency slowdown across sequential question buckets (Q1-3 → Q13-15)
+              <p className="text-xs text-ink-400">
+                Tracking mental stamina and response latency across sequential question intervals (Q1-3 → Q13-15)
               </p>
             </div>
 
@@ -367,7 +372,7 @@ export default function AnalyticsPage() {
                 onClick={() => setFatigueMode('my')}
                 className={`px-3 py-1.5 rounded-lg transition-all ${
                   fatigueMode === 'my'
-                    ? 'bg-accent text-ink-950 font-bold shadow-glow'
+                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
                     : 'text-ink-400 hover:text-white'
                 }`}
               >
@@ -377,7 +382,7 @@ export default function AnalyticsPage() {
                 onClick={() => setFatigueMode('overall')}
                 className={`px-3 py-1.5 rounded-lg transition-all ${
                   fatigueMode === 'overall'
-                    ? 'bg-accent text-ink-950 font-bold shadow-glow'
+                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
                     : 'text-ink-400 hover:text-white'
                 }`}
               >
@@ -464,26 +469,26 @@ export default function AnalyticsPage() {
 
           {/* Fatigue Insights Strip */}
           {chartData.length >= 2 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div className="p-4 rounded-xl bg-ink-950/60 border border-ink-800 flex items-center justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="p-5 rounded-2xl bg-ink-950/60 border border-ink-800 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-ink-400">Accuracy Trend</span>
-                  <p className="text-sm font-semibold text-ink-100 mt-0.5">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-ink-400">Accuracy Trend</span>
+                  <p className="text-sm font-semibold text-ink-100 mt-1">
                     {chartData[0].accuracy}% (Start) → {chartData[chartData.length - 1].accuracy}% (End)
                   </p>
                 </div>
-                <span className="text-xl">
+                <span className="text-2xl">
                   {chartData[chartData.length - 1].accuracy < chartData[0].accuracy ? '📉' : '📈'}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-ink-950/60 border border-ink-800 flex items-center justify-between">
+              <div className="p-5 rounded-2xl bg-ink-950/60 border border-ink-800 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-ink-400">Pacing Latency</span>
-                  <p className="text-sm font-semibold text-ink-100 mt-0.5">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-ink-400">Pacing Latency</span>
+                  <p className="text-sm font-semibold text-ink-100 mt-1">
                     {chartData[0].avg_time_sec}s → {chartData[chartData.length - 1].avg_time_sec}s per question
                   </p>
                 </div>
-                <span className="text-xl">⏱️</span>
+                <span className="text-2xl">⏱️</span>
               </div>
             </div>
           )}
@@ -491,138 +496,180 @@ export default function AnalyticsPage() {
       )}
 
       {/* ───────────────────────────────────────────────────────────────── */}
-      {/* SECTION 3: QUESTION DIFFICULTY INDEX TABLE                       */}
+      {/* SECTION 3: QUESTION DIFFICULTY INDEX (STRUCTURED CARD LIST)      */}
       {/* ───────────────────────────────────────────────────────────────── */}
       {activeTab === 'difficulty' && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="bg-ink-900/90 rounded-2xl border border-ink-800 shadow-xl overflow-hidden backdrop-blur-xl"
+          className="space-y-4"
         >
-          {/* Table Header */}
-          <div className="p-4 sm:p-5 border-b border-ink-800 bg-ink-950/50 flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-base sm:text-lg font-bold text-ink-100 flex items-center gap-2">
-                <span>Question Difficulty Ranking</span>
-                <span className="text-xs font-mono font-normal text-ink-400">
-                  (Failure Rate × Response Time Latency)
-                </span>
+          {/* Table / Sort Control Header */}
+          <div className="p-4 sm:p-5 bg-ink-900/90 rounded-2xl border border-ink-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <h2 className="font-display text-base sm:text-lg font-bold text-ink-100">
+                Question Difficulty Ranking
               </h2>
-              <p className="text-xs text-ink-400 mt-0.5">
-                Sortable database of questions ranked by computed cognitive challenge
+              <p className="text-xs text-ink-400">
+                Ranked by computed cognitive failure rate & student response latency
               </p>
             </div>
 
-            <span className="text-xs font-mono text-ink-400">
-              {difficultyData.length} Questions Ranked
-            </span>
+            {/* Sort Buttons Toolbar */}
+            <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+              <span className="text-ink-400 text-[11px]">Sort by:</span>
+              <button
+                onClick={() => handleDifficultySort('difficulty_score')}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                  difficultySortField === 'difficulty_score'
+                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
+                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                }`}
+              >
+                Difficulty {difficultySortField === 'difficulty_score' && (difficultySortAsc ? '↑' : '↓')}
+              </button>
+
+              <button
+                onClick={() => handleDifficultySort('accuracy_pct')}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                  difficultySortField === 'accuracy_pct'
+                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
+                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                }`}
+              >
+                Accuracy {difficultySortField === 'accuracy_pct' && (difficultySortAsc ? '↑' : '↓')}
+              </button>
+
+              <button
+                onClick={() => handleDifficultySort('avg_response_time_ms')}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                  difficultySortField === 'avg_response_time_ms'
+                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
+                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                }`}
+              >
+                Avg Time {difficultySortField === 'avg_response_time_ms' && (difficultySortAsc ? '↑' : '↓')}
+              </button>
+
+              <button
+                onClick={() => handleDifficultySort('total_attempts')}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                  difficultySortField === 'total_attempts'
+                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
+                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                }`}
+              >
+                Attempts {difficultySortField === 'total_attempts' && (difficultySortAsc ? '↑' : '↓')}
+              </button>
+            </div>
           </div>
 
-          {/* Difficulty Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse font-sans">
-              <thead>
-                <tr className="border-b border-ink-800 bg-ink-950/70 text-ink-400 uppercase font-mono text-[10px] tracking-wider">
-                  <th className="py-3 px-4 w-12">#</th>
-                  <th className="py-3 px-4">Question Prompt & Chapter</th>
-                  <th
-                    onClick={() => handleDifficultySort('total_attempts')}
-                    className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors"
+          {/* Structured Question Cards List */}
+          <div className="space-y-3">
+            {isLoadingDifficulty ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="p-5 rounded-2xl bg-ink-900/60 border border-ink-800 space-y-3 animate-pulse"
+                >
+                  <div className="h-4 w-32 bg-ink-800 rounded" />
+                  <div className="h-5 w-full bg-ink-800 rounded" />
+                  <div className="h-4 w-48 bg-ink-800 rounded" />
+                </div>
+              ))
+            ) : sortedDifficulty.length === 0 ? (
+              <div className="p-12 text-center bg-ink-900/60 rounded-2xl border border-ink-800 text-ink-400 text-xs">
+                No question records found.
+              </div>
+            ) : (
+              <AnimatePresence>
+                {sortedDifficulty.map((item, idx) => (
+                  <motion.div
+                    key={item.question_id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15, delay: Math.min(idx * 0.02, 0.2) }}
+                    className="p-5 sm:p-6 rounded-2xl bg-ink-900/90 border border-ink-800 hover:border-ink-700 transition-all duration-150 space-y-4 shadow-sm"
                   >
-                    Attempts {difficultySortField === 'total_attempts' && (difficultySortAsc ? '↑' : '↓')}
-                  </th>
-                  <th
-                    onClick={() => handleDifficultySort('accuracy_pct')}
-                    className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors"
-                  >
-                    Accuracy {difficultySortField === 'accuracy_pct' && (difficultySortAsc ? '↑' : '↓')}
-                  </th>
-                  <th
-                    onClick={() => handleDifficultySort('avg_response_time_ms')}
-                    className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors"
-                  >
-                    Avg Time {difficultySortField === 'avg_response_time_ms' && (difficultySortAsc ? '↑' : '↓')}
-                  </th>
-                  <th
-                    onClick={() => handleDifficultySort('difficulty_score')}
-                    className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors"
-                  >
-                    Difficulty Index {difficultySortField === 'difficulty_score' && (difficultySortAsc ? '↑' : '↓')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink-800/60">
-                {isLoadingDifficulty ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td className="py-3.5 px-4"><div className="h-4 w-6 bg-ink-800 rounded" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-48 bg-ink-800 rounded" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-12 bg-ink-800 rounded ml-auto" /></td>
-                      <td className="py-3.5 px-4"><div className="h-4 w-14 bg-ink-800 rounded ml-auto" /></td>
-                    </tr>
-                  ))
-                ) : sortedDifficulty.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-ink-400">
-                      No question attempt records found.
-                    </td>
-                  </tr>
-                ) : (
-                  sortedDifficulty.map((item, idx) => (
-                    <tr key={item.question_id} className="hover:bg-ink-850/50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono text-ink-400">
-                        #{idx + 1}
-                      </td>
-                      <td className="py-3.5 px-4 max-w-sm">
-                        <p className="font-medium text-ink-100 line-clamp-2 leading-relaxed">
-                          {item.question_text}
-                        </p>
-                        <span className="inline-block mt-1 font-mono text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                    {/* Top Row: Index Badge, Chapter, and Difficulty Status */}
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono text-xs font-bold text-ink-400 px-2 py-0.5 rounded bg-ink-950 border border-ink-800">
+                          #{String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <span className="font-mono text-xs text-accent px-2.5 py-0.5 rounded-full bg-accent/10 border border-accent/25">
                           {item.chapter}
                         </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono text-ink-300">
-                        {item.total_attempts}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono text-ink-200">
-                        {(item.accuracy_pct * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono text-ink-300">
-                        {(item.avg_response_time_ms / 1000).toFixed(1)}s
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
+                      </div>
+
+                      {/* Difficulty Status Badge */}
+                      <div
+                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold font-mono ${
+                          item.difficulty_score >= 0.65
+                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                            : item.difficulty_score >= 0.40
+                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                            : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                        }`}
+                      >
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold font-mono ${
+                          className={`h-2 w-2 rounded-full shrink-0 ${
                             item.difficulty_score >= 0.65
-                              ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                              ? 'bg-rose-400'
                               : item.difficulty_score >= 0.40
-                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                              : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+                              ? 'bg-amber-400'
+                              : 'bg-cyan-400'
+                          }`}
+                        />
+                        <span>Score: {item.difficulty_score.toFixed(2)}</span>
+                        <span className="text-ink-400 font-normal">•</span>
+                        <span>
+                          {item.difficulty_score >= 0.65 ? 'Hard Tier' : item.difficulty_score >= 0.40 ? 'Moderate Tier' : 'Easy Tier'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Unclamped Question Text Statement */}
+                    <div className="pt-1">
+                      <p className="font-sans font-medium text-sm sm:text-base text-ink-100 leading-relaxed">
+                        {item.question_text}
+                      </p>
+                    </div>
+
+                    {/* Bottom Metrics Breakdown Strip */}
+                    <div className="pt-3 border-t border-ink-800/80 flex flex-wrap items-center gap-4 sm:gap-6 text-xs font-mono text-ink-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink-400">Attempts:</span>
+                        <span className="font-bold text-ink-200">{item.total_attempts}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink-400">Accuracy:</span>
+                        <span
+                          className={`font-bold ${
+                            item.accuracy_pct >= 0.7
+                              ? 'text-emerald-400'
+                              : item.accuracy_pct >= 0.4
+                              ? 'text-amber-400'
+                              : 'text-rose-400'
                           }`}
                         >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                              item.difficulty_score >= 0.65
-                                ? 'bg-rose-400'
-                                : item.difficulty_score >= 0.40
-                                ? 'bg-amber-400'
-                                : 'bg-cyan-400'
-                            }`}
-                          />
-                          <span>{item.difficulty_score.toFixed(2)}</span>
-                          <span className="text-[10px] text-ink-400 font-normal">
-                            {item.difficulty_score >= 0.65 ? 'Hard' : item.difficulty_score >= 0.40 ? 'Med' : 'Easy'}
-                          </span>
+                          {(item.accuracy_pct * 100).toFixed(1)}%
                         </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink-400">Avg Duration:</span>
+                        <span className="font-bold text-ink-200">
+                          {(item.avg_response_time_ms / 1000).toFixed(1)}s
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
           </div>
         </motion.div>
       )}
