@@ -303,20 +303,40 @@ def seed_generator(
 
         questions_by_chapter[str(chapter.id)] = chapter_questions
 
-    # 4. Generate Historical Completed Quizzes & Question Attempts
+    # 4. Generate Historical Completed Quizzes & Question Attempts with 100% question coverage
     quizzes: list[Quiz] = []
     attempts: list[QuestionAttempt] = []
+    attempted_q_ids: set[Any] = set()
 
-    # Generate 1 to 2 completed quizzes for all 50 users
+    # Pass 1: Generate 1 to 2 completed quizzes for each of the 50 users, prioritizing unattempted questions
     for user in users:
-        num_quizzes_for_user = random.randint(1, 2)
-        for _ in range(num_quizzes_for_user):
-            chapter = random.choice(chapters)
+        num_quizzes = random.randint(1, 2)
+        for _ in range(num_quizzes):
+            # Prioritize chapters containing questions not yet attempted
+            unattempted_chapters = [
+                ch for ch in chapters
+                if any(q.id not in attempted_q_ids for q in questions_by_chapter.get(str(ch.id), []))
+            ]
+            chapter = random.choice(unattempted_chapters) if unattempted_chapters else random.choice(chapters)
             avail_q = questions_by_chapter.get(str(chapter.id), [])
-            if len(avail_q) < 10:
+            if not avail_q:
                 continue
 
-            sampled_questions = random.sample(avail_q, min(15, len(avail_q)))
+            unattempted_in_ch = [q for q in avail_q if q.id not in attempted_q_ids]
+            other_in_ch = [q for q in avail_q if q.id in attempted_q_ids]
+
+            needed = min(15, len(avail_q))
+            sampled_questions = unattempted_in_ch[:needed]
+            if len(sampled_questions) < needed and other_in_ch:
+                remaining = needed - len(sampled_questions)
+                sampled_questions.extend(random.sample(other_in_ch, min(remaining, len(other_in_ch))))
+
+            if not sampled_questions:
+                continue
+
+            for q in sampled_questions:
+                attempted_q_ids.add(q.id)
+
             quiz_id = ObjectId()
             quiz_start_time = now - timedelta(days=random.randint(1, 30), minutes=random.randint(0, 700))
             running_time = quiz_start_time
@@ -369,6 +389,74 @@ def seed_generator(
                 question_ids=[q.id for q in sampled_questions],
                 status="completed",
                 current_index=len(sampled_questions),
+                score=score,
+                started_at=quiz_start_time,
+                completed_at=running_time,
+            )
+            quizzes.append(quiz)
+
+    # Pass 2: Ensure any remaining unattempted questions across the 500 questions are assigned to a quiz
+    remaining_unattempted = [q for q in questions if q.id not in attempted_q_ids]
+    if remaining_unattempted:
+        from collections import defaultdict
+        unattempted_by_ch = defaultdict(list)
+        for q in remaining_unattempted:
+            unattempted_by_ch[str(q.chapter_id)].append(q)
+
+        for ch_id_str, q_list in unattempted_by_ch.items():
+            user = random.choice(users)
+            ch_model = next((c for c in chapters if str(c.id) == ch_id_str), None)
+            if not ch_model:
+                continue
+
+            quiz_id = ObjectId()
+            quiz_start_time = now - timedelta(days=random.randint(1, 20), minutes=random.randint(0, 500))
+            running_time = quiz_start_time
+            score = 0
+            user_skill = random.uniform(0.50, 0.85)
+
+            for q_idx, q in enumerate(q_list):
+                attempted_q_ids.add(q.id)
+                duration_ms = int(random.gauss(5000, 1000))
+                duration_ms = max(2000, min(15000, duration_ms))
+                is_correct = random.random() < user_skill
+                if is_correct:
+                    selected_opt = q.correct_option
+                    score += 1
+                else:
+                    distractors = [k for k in ["A", "B", "C", "D"] if k != q.correct_option]
+                    selected_opt = random.choice(distractors)
+
+                shown_at = running_time
+                running_time = shown_at + timedelta(milliseconds=duration_ms)
+                submitted_at = running_time
+
+                attempt = QuestionAttempt(
+                    _id=ObjectId(),
+                    user_id=user.id,
+                    quiz_id=quiz_id,
+                    question_id=q.id,
+                    exam_id=ch_model.exam_id,
+                    subject_id=ch_model.subject_id,
+                    chapter_id=ch_model.id,
+                    question_index_in_quiz=q_idx,
+                    question_shown_at=shown_at,
+                    answer_submitted_at=submitted_at,
+                    response_duration_ms=duration_ms,
+                    selected_option=selected_opt,
+                    is_correct=is_correct,
+                )
+                attempts.append(attempt)
+
+            quiz = Quiz(
+                _id=quiz_id,
+                user_id=user.id,
+                exam_id=ch_model.exam_id,
+                subject_id=ch_model.subject_id,
+                chapter_id=ch_model.id,
+                question_ids=[q.id for q in q_list],
+                status="completed",
+                current_index=len(q_list),
                 score=score,
                 started_at=quiz_start_time,
                 completed_at=running_time,
