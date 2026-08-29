@@ -2,9 +2,9 @@
  * ResultPage component.
  *
  * Handcrafted, editorial performance summary & diagnostic screen.
- * - Clean visual hierarchy: Header Breadcrumb -> Scoreboard & Pace Metrics -> Cognitive Audit -> Diagnostic Question Review.
- * - Non-generic layout with SVG radial score gauge, segmented progress, and clean contrast.
- * - Interactive filterable question inspector without bulky AI-slop card repetition.
+ * - Clean visual hierarchy: Breadcrumb -> Scoreboard & Pace Metrics -> Diagnostic Question Review.
+ * - Precision spacing inside cards with no cramped layout or duplicate option identifiers.
+ * - Interactive filterable question inspector (All, Correct, Missed).
  * - Direct navigation to personal analytics and next chapter practice.
  */
 
@@ -86,7 +86,6 @@ export default function ResultPage() {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useSessionStore()
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -152,7 +151,7 @@ export default function ResultPage() {
         <div className="flex items-center gap-2">
           <Link
             to={user ? `/analytics?user_id=${user.id}` : '/analytics'}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-accent text-ink-950 font-bold text-xs shadow-glow hover:opacity-95 transition-opacity"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-ink-950 font-bold text-xs shadow-glow hover:opacity-95 transition-opacity"
           >
             <span>Cohort Leaderboard & Fatigue</span>
             <span>→</span>
@@ -193,8 +192,8 @@ export default function ResultPage() {
                 <span className="text-[11px] font-mono uppercase tracking-wider text-ink-400 font-semibold">
                   Session Score
                 </span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-ink-800 text-ink-300 border border-ink-700/60">
-                  {result.score >= totalQuestions * 0.7 ? 'Passed' : 'Needs Practice'}
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-ink-800 text-ink-300 border border-ink-700/60">
+                  {result.score >= totalQuestions * 0.7 ? 'Mastered' : 'Practice Target'}
                 </span>
               </div>
 
@@ -236,9 +235,9 @@ export default function ResultPage() {
                     <span className="font-display text-4xl sm:text-5xl font-bold text-white tracking-tight">
                       {animatedScore}
                     </span>
-                    <span className="font-display text-lg text-ink-400">/ {totalQuestions}</span>
+                    <span className="font-display text-lg text-ink-400 font-normal">/ {totalQuestions}</span>
                   </div>
-                  <span className="text-xs text-ink-400 mt-1">
+                  <span className="text-xs text-ink-400 mt-1 font-mono">
                     {correctCount} Correct • {incorrectCount} Missed
                   </span>
                 </div>
@@ -268,7 +267,7 @@ export default function ResultPage() {
                   <div className="font-mono text-2xl sm:text-3xl font-bold text-ink-100">
                     {formatDuration(result.total_time_taken_ms)}
                   </div>
-                  <p className="text-xs text-ink-400 mt-0.5">Continuous attempt duration</p>
+                  <p className="text-xs text-ink-400 mt-0.5 font-sans">Continuous attempt duration</p>
                 </div>
                 <div className="text-[11px] font-mono text-ink-400 pt-2 border-t border-ink-800/60">
                   Zero pauses / strictly forward
@@ -304,19 +303,19 @@ export default function ResultPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.15 }}
-                className="sm:col-span-2 p-4 rounded-2xl bg-ink-900/90 border border-ink-800 flex items-center justify-between"
+                className="sm:col-span-2 p-4 sm:p-5 rounded-2xl bg-ink-900/90 border border-ink-800 flex items-center justify-between gap-4"
               >
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 min-w-0">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-ink-400">
                     Chapter Topic
                   </span>
-                  <p className="text-sm font-semibold text-ink-100">
+                  <p className="text-sm font-semibold text-ink-100 truncate">
                     {result.chapter_name}
                   </p>
                 </div>
                 <button
                   onClick={() => navigate('/exams')}
-                  className="px-3 py-1.5 rounded-xl bg-ink-800 hover:bg-ink-750 text-ink-200 hover:text-white text-xs font-medium border border-ink-700/80 transition-colors"
+                  className="shrink-0 px-3.5 py-2 rounded-xl bg-ink-800 hover:bg-ink-750 text-ink-200 hover:text-white text-xs font-medium border border-ink-700/80 transition-colors"
                 >
                   Practice Another Chapter →
                 </button>
@@ -325,8 +324,8 @@ export default function ResultPage() {
           </div>
 
           {/* ── Section 2: Detailed Question Diagnostic Review ──────────────── */}
-          <div className="space-y-4 pt-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-ink-800/80">
+          <div className="space-y-4 pt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-ink-800/80">
               <div>
                 <h2 className="font-display text-lg sm:text-xl font-bold text-ink-100 flex items-center gap-2">
                   <span>Question Diagnostic Review</span>
@@ -375,10 +374,12 @@ export default function ResultPage() {
             </div>
 
             {/* Questions Diagnostic List */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <AnimatePresence>
                 {filteredAttempts.map((item) => {
-                  const isExpanded = expandedIndex === item.question_index || !item.is_correct
+                  // Clean up prefix e.g. "A. Option Text" -> "Option Text" to avoid duplicate badges
+                  const cleanSelectedText = item.selected_option_text.replace(/^[A-D]\.\s*/i, '')
+                  const cleanCorrectText = item.correct_option_text.replace(/^[A-D]\.\s*/i, '')
 
                   return (
                     <motion.div
@@ -389,96 +390,107 @@ export default function ResultPage() {
                       transition={{ duration: 0.2 }}
                       className={`rounded-2xl border transition-all overflow-hidden ${
                         item.is_correct
-                          ? 'bg-ink-900/80 border-ink-800 hover:border-emerald-500/30'
-                          : 'bg-ink-900/90 border-rose-500/30 shadow-sm'
+                          ? 'bg-ink-900/90 border-ink-800/80 hover:border-emerald-500/30'
+                          : 'bg-ink-900/95 border-rose-500/30 shadow-md'
                       }`}
                     >
-                      {/* Question Row Header */}
-                      <button
-                        onClick={() =>
-                          setExpandedIndex(isExpanded && item.is_correct ? null : item.question_index)
-                        }
-                        className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-ink-850/50 transition-colors"
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Index Tag */}
+                      {/* Card Top: Metadata Bar */}
+                      <div className="px-5 pt-4 pb-3 flex items-center justify-between gap-3 border-b border-ink-800/60 bg-ink-950/40">
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-mono text-xs font-bold text-accent bg-accent/10 px-2.5 py-1 rounded-lg border border-accent/20">
+                            Question {String(item.question_index + 1).padStart(2, '0')}
+                          </span>
                           <span
-                            className={`flex h-6 w-8 shrink-0 items-center justify-center rounded-lg font-mono font-bold text-xs ${
+                            className={`inline-flex items-center gap-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-lg border ${
                               item.is_correct
-                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                             }`}
                           >
-                            Q{String(item.question_index + 1).padStart(2, '0')}
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                item.is_correct ? 'bg-emerald-400' : 'bg-rose-400'
+                              }`}
+                            />
+                            <span>{item.is_correct ? 'Correct' : 'Missed'}</span>
                           </span>
+                        </div>
 
-                          <div>
-                            <p className="text-xs sm:text-sm font-medium text-ink-100 line-clamp-2 leading-relaxed">
-                              {item.question_text}
+                        <div className="flex items-center gap-1.5 text-xs font-mono text-ink-400">
+                          <span>⏱️</span>
+                          <span>{(item.response_duration_ms / 1000).toFixed(1)}s</span>
+                        </div>
+                      </div>
+
+                      {/* Card Body: Question Statement */}
+                      <div className="px-5 py-4">
+                        <p className="text-sm sm:text-base font-medium text-ink-100 leading-relaxed font-sans">
+                          {item.question_text}
+                        </p>
+                      </div>
+
+                      {/* Card Answers: Option Breakdown */}
+                      <div className="px-5 pb-5 pt-1 space-y-3">
+                        {/* User Selection Option */}
+                        <div
+                          className={`p-3.5 sm:p-4 rounded-xl flex items-start gap-3.5 border transition-colors ${
+                            item.is_correct
+                              ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/25'
+                              : 'bg-rose-500/10 text-rose-200 border-rose-500/25'
+                          }`}
+                        >
+                          <span
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg font-mono font-bold text-xs mt-0.5 ${
+                              item.is_correct
+                                ? 'bg-emerald-500 text-ink-950 shadow-sm'
+                                : 'bg-rose-500 text-white shadow-sm'
+                            }`}
+                          >
+                            {item.selected_option}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-mono font-bold text-[11px] uppercase tracking-wider opacity-80">
+                                Your Answer
+                              </span>
+                              <span
+                                className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
+                                  item.is_correct
+                                    ? 'bg-emerald-500/20 text-emerald-300'
+                                    : 'bg-rose-500/20 text-rose-300'
+                                }`}
+                              >
+                                {item.is_correct ? '✓ Correct (+1)' : '✕ Incorrect'}
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm font-medium leading-relaxed">
+                              {cleanSelectedText}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-[11px] font-mono text-ink-400">
-                            ⏱️ {(item.response_duration_ms / 1000).toFixed(1)}s
-                          </span>
-                          <span
-                            className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                              item.is_correct
-                                ? 'bg-emerald-500/10 text-emerald-400'
-                                : 'bg-rose-500/10 text-rose-400'
-                            }`}
-                          >
-                            {item.is_correct ? '✓ Correct' : '✕ Missed'}
-                          </span>
-                        </div>
-                      </button>
-
-                      {/* Expanded Options & Comparison Panel */}
-                      {isExpanded && (
-                        <div className="px-4 pb-4 pt-1 border-t border-ink-800/80 bg-ink-950/40 space-y-2.5">
-                          {/* Selected Option */}
-                          <div
-                            className={`p-3 rounded-xl flex items-start gap-3 border ${
-                              item.is_correct
-                                ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-200 border-rose-500/20'
-                            }`}
-                          >
-                            <span
-                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono font-bold text-xs ${
-                                item.is_correct
-                                  ? 'bg-emerald-500 text-ink-950'
-                                  : 'bg-rose-500 text-white'
-                              }`}
-                            >
-                              {item.selected_option}
+                        {/* Correct Answer Option (Displayed when user missed) */}
+                        {!item.is_correct && (
+                          <div className="p-3.5 sm:p-4 rounded-xl flex items-start gap-3.5 bg-emerald-500/10 text-emerald-200 border border-emerald-500/25">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg font-mono font-bold text-xs bg-emerald-500 text-ink-950 shadow-sm mt-0.5">
+                              {item.correct_option}
                             </span>
-                            <div className="text-xs">
-                              <span className="font-mono font-semibold uppercase tracking-wider text-[10px] block opacity-75 mb-0.5">
-                                Your Selection {item.is_correct ? '(Correct)' : '(Incorrect)'}
-                              </span>
-                              <p className="font-medium leading-relaxed">{item.selected_option_text}</p>
-                            </div>
-                          </div>
-
-                          {/* Correct Option (Shown if user was incorrect) */}
-                          {!item.is_correct && (
-                            <div className="p-3 rounded-xl flex items-start gap-3 bg-emerald-500/10 text-emerald-200 border border-emerald-500/20">
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono font-bold text-xs bg-emerald-500 text-ink-950">
-                                {item.correct_option}
-                              </span>
-                              <div className="text-xs">
-                                <span className="font-mono font-semibold uppercase tracking-wider text-[10px] text-emerald-400 block mb-0.5">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-mono font-bold text-[11px] uppercase tracking-wider text-emerald-400">
                                   Expected Correct Answer
                                 </span>
-                                <p className="font-medium leading-relaxed">{item.correct_option_text}</p>
+                                <span className="text-[10px] font-mono font-semibold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+                                  Key {item.correct_option}
+                                </span>
                               </div>
+                              <p className="text-xs sm:text-sm font-medium leading-relaxed text-emerald-100">
+                                {cleanCorrectText}
+                              </p>
                             </div>
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
                   )
                 })}
