@@ -206,7 +206,7 @@ export default function SubjectListPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.15, delay: idx * 0.03 }}
                       onClick={() => navigate(`/subjects/${subject.id}/chapters`, { state: { examId } })}
-                      className="group p-4 rounded-xl bg-ink-850/60 border border-ink-800 hover:border-accent/40 hover:bg-ink-800/90 cursor-pointer transition-all duration-150 flex items-center justify-between gap-3 shadow-sm hover:shadow-glow"
+                      className="group p-4 rounded-xl bg-ink-850/60 border border-ink-800 hover:border-accent/40 hover:bg-ink-800/90 cursor-pointer transition-all duration-150 flex items-center justify-between gap-3 shadow-sm"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
                         <div className="h-10 w-10 rounded-xl bg-ink-900 text-lg flex items-center justify-center border border-ink-700/60 shrink-0 group-hover:scale-105 transition-transform">

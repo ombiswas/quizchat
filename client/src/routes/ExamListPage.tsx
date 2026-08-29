@@ -201,7 +201,7 @@ export default function ExamListPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, delay: idx * 0.05 }}
                       onClick={() => navigate(`/exams/${exam.id}/subjects`)}
-                      className={`group relative p-5 sm:p-6 rounded-2xl bg-gradient-to-b ${meta.gradient} bg-ink-850/70 border border-ink-800 hover:border-accent/50 hover:bg-ink-800/90 cursor-pointer transition-all duration-200 flex flex-col justify-between shadow-sm hover:shadow-glow`}
+                      className={`group relative p-5 sm:p-6 rounded-2xl bg-gradient-to-b ${meta.gradient} bg-ink-850/70 border border-ink-800 hover:border-accent/50 hover:bg-ink-800/90 cursor-pointer transition-all duration-200 flex flex-col justify-between shadow-sm`}
                     >
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
