@@ -59,6 +59,8 @@ export default function QuizPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [showAbandonModal, setShowAbandonModal] = useState(false)
+  const [isAbandoning, setIsAbandoning] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -77,6 +79,21 @@ export default function QuizPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages, isSubmitting])
+
+  // ── Handle Abandon Quiz ───────────────────────────────────────────────────
+  const handleAbandonQuiz = async () => {
+    if (!quizId || isAbandoning) return
+    setIsAbandoning(true)
+    try {
+      await apiClient.post(`/api/quizzes/${quizId}/abandon`, {})
+      navigate(`/quiz/${quizId}/result`)
+    } catch {
+      navigate(`/quiz/${quizId}/result`)
+    } finally {
+      setIsAbandoning(false)
+      setShowAbandonModal(false)
+    }
+  }
 
   // ── Initial Question Fetch ──────────────────────────────────────────────────
   useEffect(() => {
@@ -104,7 +121,7 @@ export default function QuizPage() {
       .catch((err) => {
         if (!isMounted) return
         if (err instanceof ApiError && err.status === 409) {
-          // Quiz already completed -> navigate to results
+          // Quiz completed or abandoned -> navigate to results
           navigate(`/quiz/${quizId}/result`)
           return
         }
@@ -201,14 +218,25 @@ export default function QuizPage() {
               </div>
             </div>
 
-            {/* Question Counter Pill */}
-            <div className="flex items-center gap-1.5 bg-ink-900 px-3.5 py-1.5 rounded-full border border-ink-800 shadow-sm font-mono text-xs">
-              <span className="text-ink-400">Question</span>
-              <span className="font-bold text-accent">
-                {String(questionIndex).padStart(2, '0')}
-              </span>
-              <span className="text-ink-600">/</span>
-              <span className="text-ink-400">{String(totalQuestions).padStart(2, '0')}</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Question Counter Pill */}
+              <div className="flex items-center gap-1.5 bg-ink-900 px-3 py-1.5 rounded-full border border-ink-800 shadow-sm font-mono text-xs">
+                <span className="text-ink-400">Question</span>
+                <span className="font-bold text-accent">
+                  {String(questionIndex).padStart(2, '0')}
+                </span>
+                <span className="text-ink-600">/</span>
+                <span className="text-ink-400">{String(totalQuestions).padStart(2, '0')}</span>
+              </div>
+
+              {/* Abandon / Exit Button */}
+              <button
+                onClick={() => setShowAbandonModal(true)}
+                className="px-3 py-1.5 rounded-full bg-ink-900 hover:bg-danger/15 text-ink-400 hover:text-danger border border-ink-800 hover:border-danger/30 text-xs font-mono transition-colors"
+                title="Abandon quiz and finalize results"
+              >
+                Exit Quiz
+              </button>
             </div>
           </div>
 
@@ -370,6 +398,57 @@ export default function QuizPage() {
           </div>
         )}
       </div>
+
+      {/* ── Abandon Quiz Confirmation Modal ──────────────────────────────── */}
+      <AnimatePresence>
+        {showAbandonModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.15 }}
+              className="w-full max-w-md bg-ink-900 border border-ink-800 rounded-2xl p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-danger/15 text-danger flex items-center justify-center text-lg shrink-0">
+                  ⚠️
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-ink-100">
+                    Abandon Quiz Session?
+                  </h3>
+                  <p className="text-xs text-ink-400 font-mono">
+                    Single Attempt Assessment
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs sm:text-sm text-ink-300 leading-relaxed font-sans">
+                Leaving now will finalize your attempt with the questions answered so far. <strong className="text-ink-100">You will not be able to resume this session later.</strong>
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowAbandonModal(false)}
+                  disabled={isAbandoning}
+                  className="px-4 py-2 rounded-xl bg-ink-800 hover:bg-ink-750 text-ink-200 text-xs font-medium border border-ink-700 transition-colors"
+                >
+                  Continue Quiz
+                </button>
+                <button
+                  onClick={handleAbandonQuiz}
+                  disabled={isAbandoning}
+                  className="px-4 py-2 rounded-xl bg-danger/20 hover:bg-danger/30 text-danger border border-danger/40 text-xs font-semibold transition-colors flex items-center gap-2"
+                >
+                  {isAbandoning ? 'Abandoning...' : 'Abandon & View Result'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
+

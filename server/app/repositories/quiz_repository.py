@@ -89,3 +89,23 @@ class QuizRepository:
             {"_id": oid},
             {"$set": update_fields},
         )
+
+    async def mark_abandoned(
+        self,
+        quiz_id: str | ObjectId,
+        completed_at: datetime,
+    ) -> bool:
+        """
+        Mark an in-progress quiz session as abandoned.
+        """
+        if isinstance(quiz_id, str):
+            oid = ObjectId(quiz_id)
+        else:
+            oid = quiz_id
+
+        res = await self.collection.update_one(
+            {"_id": oid, "status": "in_progress"},
+            {"$set": {"status": "abandoned", "completed_at": completed_at}},
+        )
+        return res.modified_count > 0
+

@@ -17,6 +17,7 @@ from app.repositories.subject_repository import SubjectRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
     CreateQuizRequest,
+    QuizAbandonResponse,
     QuizResultResponse,
     QuizStartResponse,
     SubmitAnswerRequest,
@@ -107,6 +108,23 @@ async def submit_answer(
     )
 
 
+@router.post(
+    "/{quiz_id}/abandon",
+    response_model=QuizAbandonResponse,
+    summary="Abandon an in-progress quiz session",
+    description="Terminates the quiz session early, preventing future resumption and locking the attempt.",
+)
+async def abandon_quiz(
+    quiz_id: str,
+    current_user: User = Depends(get_current_user),
+    service: QuizService = Depends(get_quiz_service),
+) -> QuizAbandonResponse:
+    return await service.abandon_quiz(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+    )
+
+
 @router.get(
     "/{quiz_id}/result",
     response_model=QuizResultResponse,
@@ -122,3 +140,4 @@ async def get_quiz_result(
         user_id=current_user.id,
         quiz_id=quiz_id,
     )
+

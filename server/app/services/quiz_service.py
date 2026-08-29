@@ -24,10 +24,14 @@ from app.repositories.subject_repository import SubjectRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
     QuestionAttemptDetail,
+    QuizAbandonResponse,
     QuizResultResponse,
     QuizStartResponse,
     SubmitAnswerResponse,
 )
+
+INACTIVITY_TIMEOUT_SECONDS: int = 600
+
 
 
 class QuizService:
@@ -160,11 +164,28 @@ class QuizService:
                 detail="You are not authorized to access this quiz.",
             )
 
-        # 3. Status check
-        if quiz.status != "in_progress" or quiz.current_index >= len(quiz.question_ids):
+        # 3. Status and Inactivity check
+        now = datetime.now(timezone.utc)
+        if quiz.status == "abandoned":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This quiz session was abandoned early and cannot be resumed.",
+            )
+        if quiz.status == "completed" or quiz.current_index >= len(quiz.question_ids):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Quiz has already been completed.",
+            )
+
+        # Inactivity timeout enforcement (10 minutes anti-cheat)
+        shown_at = quiz.current_question_shown_at or quiz.started_at or now
+        if shown_at.tzinfo is None:
+            shown_at = shown_at.replace(tzinfo=timezone.utc)
+        if (now - shown_at).total_seconds() > INACTIVITY_TIMEOUT_SECONDS:
+            await self.quiz_repo.mark_abandoned(quiz.id, now)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This quiz session expired due to inactivity (>10 minutes) and cannot be resumed.",
             )
 
         # 4. Fetch the current question by the server-controlled current_index
@@ -231,11 +252,27 @@ class QuizService:
                 detail="You are not authorized to submit answers for this quiz.",
             )
 
-        # 3. Status check
+        # 3. Status and Inactivity check
+        now = datetime.now(timezone.utc)
+        if quiz.status == "abandoned":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This quiz session was abandoned early and cannot be resumed.",
+            )
         if quiz.status != "in_progress" or quiz.current_index >= len(quiz.question_ids):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Quiz has already been completed.",
+            )
+
+        shown_at = quiz.current_question_shown_at or quiz.started_at or now
+        if shown_at.tzinfo is None:
+            shown_at = shown_at.replace(tzinfo=timezone.utc)
+        if (now - shown_at).total_seconds() > INACTIVITY_TIMEOUT_SECONDS:
+            await self.quiz_repo.mark_abandoned(quiz.id, now)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This quiz session expired due to inactivity (>10 minutes) and cannot be resumed.",
             )
 
         # 4. Strict Index / Question ID match ("no going back" enforcement)
@@ -322,18 +359,54 @@ class QuizService:
             next_question=next_client_q,
         )
 
+    async def abandon_quiz(
+        self,
+        user_id: str | ObjectId,
+        quiz_id: str,
+    ) -> QuizAbandonResponse:
+        """
+        Explicitly abandon/terminate an in-progress quiz session.
+        """
+        quiz = await self.quiz_repo.get_by_id(quiz_id)
+        if not quiz:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Quiz with id '{quiz_id}' not found.",
+            )
+
+        req_user_id_str = str(user_id)
+        quiz_user_id_str = str(quiz.user_id)
+        if req_user_id_str != quiz_user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to abandon this quiz.",
+            )
+
+        now = datetime.now(timezone.utc)
+        if quiz.status == "in_progress":
+            await self.quiz_repo.mark_abandoned(quiz.id, now)
+
+        return QuizAbandonResponse(
+            quiz_id=str(quiz.id),
+            status="abandoned",
+            score=quiz.score,
+            total_questions=len(quiz.question_ids),
+            answered_questions=quiz.current_index,
+            completed_at=now.isoformat(),
+        )
+
     async def get_quiz_result(
         self,
         user_id: str | ObjectId,
         quiz_id: str,
     ) -> QuizResultResponse:
         """
-        Fetch the final score summary and curriculum metadata for a completed quiz.
+        Fetch the final score summary and curriculum metadata for a completed or abandoned quiz.
 
         Guards:
           - 404 if the quiz does not exist.
           - 403 if the quiz belongs to another user.
-          - 409 if the quiz is still in progress (not completed).
+          - 409 if the quiz is still in progress.
         """
         # 1. Validate quiz exists
         quiz = await self.quiz_repo.get_by_id(quiz_id)
@@ -353,10 +426,10 @@ class QuizService:
             )
 
         # 3. Completion check
-        if quiz.status != "completed":
+        if quiz.status not in ["completed", "abandoned"]:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Quiz is still in progress and has not been completed yet.",
+                detail="Quiz is still in progress and has not concluded yet.",
             )
 
         # 4. Fetch curriculum names for display breadcrumb
@@ -435,6 +508,7 @@ class QuizService:
             subject_name=subject_name,
             chapter_id=str(quiz.chapter_id),
             chapter_name=chapter_name,
+            status=quiz.status,
             completed_at=completed_iso,
             attempts=attempt_details,
         )

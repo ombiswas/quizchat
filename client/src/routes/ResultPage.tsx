@@ -36,6 +36,7 @@ interface QuizResultData {
   exam_name: string
   subject_name: string
   chapter_name: string
+  status?: string
   attempts?: QuestionAttemptDetail[]
 }
 
@@ -192,8 +193,20 @@ export default function ResultPage() {
                 <span className="text-[11px] font-mono uppercase tracking-wider text-ink-400 font-semibold">
                   Session Score
                 </span>
-                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-ink-800 text-ink-300 border border-ink-700/60">
-                  {result.score >= totalQuestions * 0.7 ? 'Mastered' : 'Practice Target'}
+                <span
+                  className={`text-xs font-mono px-2.5 py-0.5 rounded-full border ${
+                    result.status === 'abandoned'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : result.score >= totalQuestions * 0.7
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                      : 'bg-ink-800 text-ink-300 border-ink-700/60'
+                  }`}
+                >
+                  {result.status === 'abandoned'
+                    ? 'Concluded Early'
+                    : result.score >= totalQuestions * 0.7
+                    ? 'Mastered'
+                    : 'Practice Target'}
                 </span>
               </div>
 

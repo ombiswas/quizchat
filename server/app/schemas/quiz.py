@@ -126,8 +126,23 @@ class QuizResultResponse(BaseModel):
     subject_name: str
     chapter_id: str
     chapter_name: str
+    status: str = "completed"
     completed_at: str = Field(description="ISO formatted completion timestamp")
     attempts: list[QuestionAttemptDetail] = Field(
         default_factory=list,
         description="Full question-by-question review of user attempts and correct answers",
     )
+
+
+class QuizAbandonResponse(BaseModel):
+    """
+    Response returned when a quiz session is abandoned early.
+    """
+
+    quiz_id: str
+    status: str = "abandoned"
+    score: int
+    total_questions: int
+    answered_questions: int
+    completed_at: str
+
