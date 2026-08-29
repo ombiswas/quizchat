@@ -506,7 +506,7 @@ export default function AnalyticsPage() {
           className="space-y-4"
         >
           {/* Table / Sort Control Header */}
-          <div className="p-4 sm:p-5 bg-ink-900/90 rounded-2xl border border-ink-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-4 sm:p-5 bg-ink-900/90 rounded-2xl border border-ink-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-0.5">
               <h2 className="font-display text-base sm:text-lg font-bold text-ink-100">
                 Question Difficulty Ranking
@@ -516,15 +516,15 @@ export default function AnalyticsPage() {
               </p>
             </div>
 
-            {/* Sort Buttons Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-              <span className="text-ink-400 text-[11px]">Sort by:</span>
+            {/* Single-Row Segmented Sort Control */}
+            <div className="flex items-center gap-1 bg-ink-950 p-1 rounded-xl border border-ink-800 font-mono text-xs self-start md:self-auto overflow-x-auto max-w-full">
+              <span className="text-ink-400 text-[10px] uppercase font-bold px-2 shrink-0">Sort:</span>
               <button
                 onClick={() => handleDifficultySort('difficulty_score')}
-                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
                   difficultySortField === 'difficulty_score'
-                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
-                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
+                    : 'text-ink-300 hover:text-white'
                 }`}
               >
                 Difficulty {difficultySortField === 'difficulty_score' && (difficultySortAsc ? '↑' : '↓')}
@@ -532,10 +532,10 @@ export default function AnalyticsPage() {
 
               <button
                 onClick={() => handleDifficultySort('accuracy_pct')}
-                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
                   difficultySortField === 'accuracy_pct'
-                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
-                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
+                    : 'text-ink-300 hover:text-white'
                 }`}
               >
                 Accuracy {difficultySortField === 'accuracy_pct' && (difficultySortAsc ? '↑' : '↓')}
@@ -543,10 +543,10 @@ export default function AnalyticsPage() {
 
               <button
                 onClick={() => handleDifficultySort('avg_response_time_ms')}
-                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
                   difficultySortField === 'avg_response_time_ms'
-                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
-                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
+                    : 'text-ink-300 hover:text-white'
                 }`}
               >
                 Avg Time {difficultySortField === 'avg_response_time_ms' && (difficultySortAsc ? '↑' : '↓')}
@@ -554,10 +554,10 @@ export default function AnalyticsPage() {
 
               <button
                 onClick={() => handleDifficultySort('total_attempts')}
-                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
                   difficultySortField === 'total_attempts'
-                    ? 'bg-accent/15 text-accent border-accent/40 font-bold'
-                    : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white'
+                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
+                    : 'text-ink-300 hover:text-white'
                 }`}
               >
                 Attempts {difficultySortField === 'total_attempts' && (difficultySortAsc ? '↑' : '↓')}
