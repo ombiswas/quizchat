@@ -307,8 +307,8 @@ def seed_generator(
     quizzes: list[Quiz] = []
     attempts: list[QuestionAttempt] = []
 
-    # Generate 1 to 2 completed quizzes for ~35 users
-    for user in users[:35]:
+    # Generate 1 to 2 completed quizzes for all 50 users
+    for user in users:
         num_quizzes_for_user = random.randint(1, 2)
         for _ in range(num_quizzes_for_user):
             chapter = random.choice(chapters)
