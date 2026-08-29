@@ -23,6 +23,7 @@ from app.repositories.quiz_repository import QuizRepository
 from app.repositories.subject_repository import SubjectRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
+    PastAttemptItem,
     QuestionAttemptDetail,
     QuizAbandonResponse,
     QuizResultResponse,
@@ -197,7 +198,33 @@ class QuizService:
                 detail=f"Question with id '{current_question_id}' not found.",
             )
 
-        # 5. Stamp / refresh question_shown_at if not already stamped
+        # 5. Fetch previous attempts if current_index > 0 to restore chat history on page refresh
+        previous_attempts: list[PastAttemptItem] = []
+        if quiz.current_index > 0:
+            attempt_models = await self.attempt_repo.get_by_quiz_id(quiz.id)
+            past_q_ids = [att.question_id for att in attempt_models]
+            past_q_models = await self.question_repo.get_by_ids(past_q_ids)
+            past_q_map = {str(q.id): q for q in past_q_models}
+
+            for att in attempt_models:
+                q_model = past_q_map.get(str(att.question_id))
+                if not q_model:
+                    continue
+                sel_opt = next((o for o in q_model.options if o.key == att.selected_option), None)
+                sel_text = f"{att.selected_option}. {sel_opt.text}" if sel_opt else att.selected_option
+                previous_attempts.append(
+                    PastAttemptItem(
+                        question_id=str(att.question_id),
+                        question_index=att.question_index_in_quiz,
+                        question_text=q_model.text,
+                        selected_option=att.selected_option,
+                        selected_option_text=sel_text,
+                        is_correct=att.is_correct,
+                        correct_option=q_model.correct_option,
+                    )
+                )
+
+        # 6. Stamp / refresh question_shown_at if not already stamped
         if quiz.current_question_shown_at is None:
             now = datetime.now(timezone.utc)
             await self.quiz_repo.update_shown_time(quiz.id, now)
@@ -206,6 +233,7 @@ class QuizService:
             question=question,
             question_index=quiz.current_index,
             total_questions=len(quiz.question_ids),
+            previous_attempts=previous_attempts,
         )
 
     async def submit_answer(

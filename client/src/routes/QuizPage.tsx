@@ -22,10 +22,23 @@ interface OptionItem {
   text: string
 }
 
+interface PastAttemptItem {
+  question_id: string
+  question_index: number
+  question_text: string
+  selected_option: string
+  selected_option_text: string
+  is_correct: boolean
+  correct_option: string
+}
+
 interface QuestionItem {
   id: string
   text: string
   options: OptionItem[]
+  question_index?: number
+  total_questions?: number
+  previous_attempts?: PastAttemptItem[]
 }
 
 interface SubmitResponse {
@@ -54,7 +67,7 @@ export default function QuizPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [currentQuestion, setCurrentQuestion] = useState<QuestionItem | null>(null)
   const [questionIndex, setQuestionIndex] = useState(1)
-  const [totalQuestions] = useState(15)
+  const [totalQuestions, setTotalQuestions] = useState(15)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -106,16 +119,47 @@ export default function QuizPage() {
       .get<QuestionItem>(`/api/quizzes/${quizId}/current-question`)
       .then((question) => {
         if (!isMounted) return
+        const realQuestionIndex = (question.question_index ?? 0) + 1
+        setQuestionIndex(realQuestionIndex)
+        if (question.total_questions) {
+          setTotalQuestions(question.total_questions)
+        }
         setCurrentQuestion(question)
-        setMessages([
-          {
-            id: `q-${question.id}-${Date.now()}`,
-            type: 'incoming_question',
-            questionIndex: 1,
-            text: question.text,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ])
+
+        const restoredMessages: ChatMessage[] = []
+
+        // 1. Restore previous answered questions & answers
+        if (question.previous_attempts && question.previous_attempts.length > 0) {
+          question.previous_attempts.forEach((att) => {
+            restoredMessages.push({
+              id: `q-${att.question_id}-${att.question_index}`,
+              type: 'incoming_question',
+              questionIndex: att.question_index + 1,
+              text: att.question_text,
+              timestamp: 'Earlier',
+            })
+            restoredMessages.push({
+              id: `a-${att.question_id}-${att.question_index}`,
+              type: 'outgoing_answer',
+              text: att.selected_option_text,
+              optionKey: att.selected_option,
+              isCorrect: att.is_correct,
+              correctOption: att.correct_option,
+              timestamp: 'Earlier',
+            })
+          })
+        }
+
+        // 2. Append the active current question
+        restoredMessages.push({
+          id: `q-${question.id}-${Date.now()}`,
+          type: 'incoming_question',
+          questionIndex: realQuestionIndex,
+          text: question.text,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        })
+
+        setMessages(restoredMessages)
         setIsLoading(false)
       })
       .catch((err) => {

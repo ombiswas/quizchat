@@ -15,10 +15,24 @@ class ClientOptionResponse(BaseModel):
     text: str = Field(description="Option display text")
 
 
+class PastAttemptItem(BaseModel):
+    """
+    Sanitized past attempt representation to restore chat history on refresh.
+    """
+
+    question_id: str
+    question_index: int
+    question_text: str
+    selected_option: str
+    selected_option_text: str
+    is_correct: bool
+    correct_option: str
+
+
 class ClientQuestionResponse(BaseModel):
     """
     Sanitized question representation served to the client during a quiz.
-    CRITICAL: Does NOT contain correct_option to prevent client-side inspection.
+    CRITICAL: Does NOT contain correct_option for active question to prevent client-side inspection.
     """
 
     id: str
@@ -26,6 +40,7 @@ class ClientQuestionResponse(BaseModel):
     options: list[ClientOptionResponse]
     question_index: int = Field(description="0-based index of this question in the quiz")
     total_questions: int = Field(description="Total number of questions in this quiz session")
+    previous_attempts: list[PastAttemptItem] = Field(default_factory=list)
 
     @classmethod
     def from_model(
@@ -33,6 +48,7 @@ class ClientQuestionResponse(BaseModel):
         question: Question,
         question_index: int,
         total_questions: int,
+        previous_attempts: list[PastAttemptItem] | None = None,
     ) -> "ClientQuestionResponse":
         return cls(
             id=str(question.id),
@@ -43,6 +59,7 @@ class ClientQuestionResponse(BaseModel):
             ],
             question_index=question_index,
             total_questions=total_questions,
+            previous_attempts=previous_attempts or [],
         )
 
 
