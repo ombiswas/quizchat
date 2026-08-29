@@ -5,7 +5,7 @@
  * - Questions appear as incoming chat bubbles (left-aligned).
  * - 4 options render as interactive bubble buttons below the active question.
  * - On selection, the user's choice appears as an outgoing bubble (right-aligned).
- * - Brief correctness feedback is revealed.
+ * - Full text of the correct answer is revealed with pedagogical clarity.
  * - Thread auto-scrolls smoothly and the next question slides in via Framer Motion.
  * - Irreversible: zero back affordances, strictly unidirectional.
  */
@@ -41,6 +41,7 @@ interface ChatMessage {
   optionKey?: string
   isCorrect?: boolean
   correctOption?: string
+  correctOptionText?: string
   timestamp: string
 }
 
@@ -131,7 +132,13 @@ export default function QuizPage() {
         selected_option: option.key,
       })
 
-      // 1. Append user's outgoing answer bubble with correctness badge
+      // Look up full text of the correct option
+      const correctOptObj = currentQuestion.options.find((o) => o.key === result.correct_option)
+      const fullCorrectText = correctOptObj
+        ? `${correctOptObj.key}. ${correctOptObj.text}`
+        : result.correct_option
+
+      // 1. Append user's outgoing answer bubble with full correctness & answer reveal
       const answerMessage: ChatMessage = {
         id: `a-${currentQuestion.id}-${Date.now()}`,
         type: 'outgoing_answer',
@@ -139,12 +146,13 @@ export default function QuizPage() {
         optionKey: option.key,
         isCorrect: result.is_correct,
         correctOption: result.correct_option,
+        correctOptionText: fullCorrectText,
         timestamp: nowStr,
       }
 
       setMessages((prev) => [...prev, answerMessage])
 
-      // 2. Wait a brief delay for user feedback, then advance to next question or results
+      // 2. Comfortable delay (1400ms) for user to read feedback before advancing
       setTimeout(() => {
         if (result.next_question) {
           const nextIndex = questionIndex + 1
@@ -168,7 +176,7 @@ export default function QuizPage() {
           // Quiz completed!
           navigate(`/quiz/${quizId}/result`)
         }
-      }, 700)
+      }, 1400)
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to submit answer')
       setIsSubmitting(false)
@@ -265,33 +273,51 @@ export default function QuizPage() {
                         </div>
                       </div>
                     ) : (
-                      /* Outgoing Answer Bubble (Right) */
-                      <div className="flex flex-col items-end max-w-[85%]">
+                      /* Outgoing Answer Bubble (Right) + Full Answer Reveal */
+                      <div className="flex flex-col items-end max-w-[90%] sm:max-w-[85%]">
                         <div className="bubble-out">
                           <p className="text-sm font-semibold leading-snug">
                             {msg.text}
                           </p>
                         </div>
-                        {/* Correctness Pill Tag */}
-                        <div className="flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold">
-                          {msg.isCorrect ? (
-                            <span className="text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                              ✓ Correct (+1)
-                            </span>
-                          ) : (
-                            <span className="text-rose-400 flex items-center gap-1 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/30">
-                              ✕ Incorrect • Correct: {msg.correctOption}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-ink-400">{msg.timestamp}</span>
-                        </div>
+
+                        {/* Correctness & Pedagogical Answer Card */}
+                        {msg.isCorrect ? (
+                          <div className="flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <span>✓ Correct! (+1)</span>
+                            <span className="text-[10px] text-ink-400 ml-2 font-normal">{msg.timestamp}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-end gap-1 mt-1.5 w-full">
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                              <span>✕ Incorrect</span>
+                              <span className="text-[10px] text-ink-400 ml-2 font-normal">{msg.timestamp}</span>
+                            </div>
+
+                            {/* Full text of correct answer */}
+                            {msg.correctOptionText && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-1 p-3 rounded-xl bg-ink-800/95 border border-cyan-500/30 text-left shadow-lg backdrop-blur-sm max-w-full"
+                              >
+                                <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-accent mb-1">
+                                  <span>💡 Correct Answer:</span>
+                                </div>
+                                <p className="text-xs text-ink-100 font-sans font-medium leading-relaxed">
+                                  {msg.correctOptionText}
+                                </p>
+                              </motion.div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </motion.div>
                 ))}
               </AnimatePresence>
 
-              {/* Submitting indicator */}
+              {/* Submitting / Advancing indicator */}
               {isSubmitting && (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
@@ -303,7 +329,7 @@ export default function QuizPage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:0.2s]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:0.4s]" />
                   </div>
-                  <span>Recording attempt & evaluating...</span>
+                  <span>Evaluating answer & loading next topic...</span>
                 </motion.div>
               )}
 

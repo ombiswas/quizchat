@@ -552,9 +552,6 @@ export default function AnalyticsPage() {
                     </tr>
                   ) : (
                     sortedDifficulty.map((item, idx) => {
-                      const difficultyPercent = Math.round(item.difficulty_score * 100)
-                      const isHighDifficulty = item.difficulty_score >= 0.65
-
                       return (
                         <tr key={item.question_id} className="hover:bg-ink-800/50 transition-colors">
                           <td className="py-3.5 px-4 font-mono text-ink-400">
@@ -577,15 +574,29 @@ export default function AnalyticsPage() {
                           <td className="py-3.5 px-4 text-right font-mono text-ink-300">
                             {(item.avg_response_time_ms / 1000).toFixed(1)}s
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono font-bold">
+                          <td className="py-3.5 px-4 text-right">
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] ${
-                                isHighDifficulty
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold font-mono ${
+                                item.difficulty_score >= 0.65
                                   ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                  : item.difficulty_score >= 0.40
+                                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                                   : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
                               }`}
                             >
-                              {difficultyPercent}% ({item.difficulty_score.toFixed(2)})
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                  item.difficulty_score >= 0.65
+                                    ? 'bg-rose-400'
+                                    : item.difficulty_score >= 0.40
+                                    ? 'bg-amber-400'
+                                    : 'bg-cyan-400'
+                                }`}
+                              />
+                              <span>{item.difficulty_score.toFixed(2)}</span>
+                              <span className="text-[10px] text-ink-400 font-normal">
+                                {item.difficulty_score >= 0.65 ? 'Hard' : item.difficulty_score >= 0.40 ? 'Med' : 'Easy'}
+                              </span>
                             </span>
                           </td>
                         </tr>
