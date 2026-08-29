@@ -188,9 +188,9 @@ export default function QuizPage() {
         <div className="p-4 sm:p-5 border-b border-ink-800 bg-ink-950/60 flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="px-2 py-0.5 rounded-md bg-accent/15 border border-accent/30 text-accent font-mono text-[10px] uppercase font-bold tracking-wider">
+              {/* <span className="px-2 py-0.5 rounded-md bg-accent/15 border border-accent/30 text-accent font-mono text-[10px] uppercase font-bold tracking-wider">
                 Active
-              </span>
+              </span> */}
               <div>
                 <h1 className="font-display text-base sm:text-lg font-bold text-ink-100 flex items-center gap-2">
                   Adaptive Quiz Session
