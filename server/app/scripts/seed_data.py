@@ -18,6 +18,7 @@ Reproducibility:
 
 import argparse
 import asyncio
+import certifi
 from datetime import datetime, timedelta, timezone
 import logging
 import random
@@ -336,10 +337,13 @@ async def seed_database(force: bool = False) -> None:
     # Seed RNGs for determinism
     random.seed(RANDOM_SEED)
     Faker.seed(RANDOM_SEED)
-    fake = Faker("en_IN")
-
     logger.info("Connecting to MongoDB at '%s'...", settings.mongo_uri)
-    client = AsyncIOMotorClient(settings.mongo_uri)
+    kwargs = {}
+    uri_lower = settings.mongo_uri.lower()
+    if "mongodb+srv://" in uri_lower or "ssl=true" in uri_lower or "tls=true" in uri_lower:
+        kwargs["tlsCAFile"] = certifi.where()
+
+    client = AsyncIOMotorClient(settings.mongo_uri, **kwargs)
     db = client[settings.mongo_db_name]
 
     try:
