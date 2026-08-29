@@ -69,12 +69,25 @@ class Settings(BaseSettings):
         """
         Parse frontend_origin into a list of origins (supports comma-separated production origins).
         """
-        if not self.frontend_origin:
-            return ["http://localhost:5173"]
-        return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]
+        origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
+        if self.frontend_origin:
+            for o in self.frontend_origin.split(","):
+                clean = o.strip()
+                if clean and clean not in origins:
+                    origins.append(clean)
+        return origins
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "server/.env", "../server/.env"),
         env_file_encoding="utf-8",
         # Allow extra fields in .env without raising an error (useful when the
         # .env also contains VITE_* variables intended for the frontend).

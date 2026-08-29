@@ -264,6 +264,8 @@ class QuizService:
         # 7. Compute timing
         now = datetime.now(timezone.utc)
         shown_at = quiz.current_question_shown_at or quiz.started_at or now
+        if shown_at.tzinfo is None:
+            shown_at = shown_at.replace(tzinfo=timezone.utc)
         # Ensure non-negative duration in case of clock drift
         response_duration_ms = max(0, int((now - shown_at).total_seconds() * 1000))
 
@@ -374,8 +376,10 @@ class QuizService:
         )
         total_time_taken_ms = 0
         if quiz.completed_at and quiz.started_at:
+            comp_at = quiz.completed_at if quiz.completed_at.tzinfo else quiz.completed_at.replace(tzinfo=timezone.utc)
+            start_at = quiz.started_at if quiz.started_at.tzinfo else quiz.started_at.replace(tzinfo=timezone.utc)
             total_time_taken_ms = max(
-                0, int((quiz.completed_at - quiz.started_at).total_seconds() * 1000)
+                0, int((comp_at - start_at).total_seconds() * 1000)
             )
 
         completed_iso = (
