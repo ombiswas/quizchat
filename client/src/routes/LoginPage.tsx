@@ -3,9 +3,9 @@
  *
  * Handcrafted learner profile directory & instant session launcher.
  * - Modern 2-column responsive layout with clear visual hierarchy.
- * - Instant search filter with clear action and quick random profile selection.
+ * - Instant search filter with clear action.
  * - High-craft profile cards with deterministic avatars, status tags, and smooth hover micro-interactions.
- * - No passwords or friction: single-tap instant authentication with JWT token issuance.
+ * - Single-tap instant authentication with JWT token issuance.
  */
 
 import { useState, useMemo } from 'react'
@@ -99,42 +99,22 @@ export default function LoginPage() {
     )
   }, [users, searchQuery])
 
-  // Random quick login
-  const handleRandomSelect = () => {
-    if (!users.length || loginMutation.isPending) return
-    const randomUser = users[Math.floor(Math.random() * users.length)]
-    handleUserSelect(randomUser)
-  }
-
   return (
     <div className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start space-y-6">
       {/* ── Brand & Welcome Banner ─────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-ink-800/80">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-            <span className="font-mono text-[11px] uppercase tracking-wider text-accent font-semibold">
-              Adaptive Cognitive Quiz Assessment
-            </span>
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink-100 tracking-tight">
-            Select Learner Profile
-          </h1>
-          <p className="text-xs sm:text-sm text-ink-400 max-w-xl">
-            Choose any learner account below for instant 1-tap authentication. No passwords needed.
-          </p>
+      <div className="space-y-1 pb-4 border-b border-ink-800/80">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+          <span className="font-mono text-[11px] uppercase tracking-wider text-accent font-semibold">
+            Adaptive Cognitive Quiz Assessment
+          </span>
         </div>
-
-        {/* Quick Demo Pick CTA */}
-        {users.length > 0 && (
-          <button
-            onClick={handleRandomSelect}
-            disabled={loginMutation.isPending}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ink-800 hover:bg-ink-750 text-ink-200 hover:text-white border border-ink-700/80 text-xs font-semibold font-mono transition-all self-start sm:self-auto hover:border-accent/40 shadow-sm active:scale-95"
-          >
-            <span>🎲 Quick Random Login</span>
-          </button>
-        )}
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink-100 tracking-tight">
+          Select Learner Profile
+        </h1>
+        <p className="text-xs sm:text-sm text-ink-400 max-w-xl">
+          Choose a learner account to start an adaptive session.
+        </p>
       </div>
 
       {/* ── Main Container ────────────────────────────────────────────────── */}
@@ -203,7 +183,7 @@ export default function LoginPage() {
         )}
 
         {/* ── Profiles Grid Area ──────────────────────────────────────────── */}
-        <div className="p-4 sm:p-5 overflow-y-auto max-h-[560px]">
+        <div className="p-4 sm:p-5 overflow-y-auto max-h-[580px]">
           {isLoading ? (
             /* Skeleton Loading Grid */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -327,12 +307,6 @@ export default function LoginPage() {
               </AnimatePresence>
             </div>
           )}
-        </div>
-
-        {/* ── Footer Bar ──────────────────────────────────────────────────── */}
-        <div className="px-5 py-3.5 bg-ink-950/60 border-t border-ink-800 flex items-center justify-between text-[11px] font-mono text-ink-400">
-          <span>Single-Sign-On Demo Mode</span>
-          <span className="text-ink-400">JWT Token Session Duration: 24h</span>
         </div>
       </div>
     </div>

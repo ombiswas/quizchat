@@ -1,13 +1,12 @@
 /**
  * QuizPage component.
  *
- * Core WhatsApp/Chat-style adaptive quiz interface.
- * - Questions appear as incoming chat bubbles (left-aligned).
- * - 4 options render as interactive bubble buttons below the active question.
- * - On selection, the user's choice appears as an outgoing bubble (right-aligned).
- * - Fast, minimal correctness indicator (e.g. "✓ Correct (+1)" or "✕ Incorrect • Correct: A").
- * - Snappy auto-scroll and transition to next question.
- * - Irreversible: zero back affordances, strictly unidirectional.
+ * Handcrafted conversational adaptive quiz interface.
+ * - Questions appear as incoming chat bubbles (left-aligned) with clean typographic clarity.
+ * - 4 interactive options render in a tactile bottom drawer.
+ * - Outgoing answer bubble (right-aligned) with concise correctness tag.
+ * - Strictly unidirectional (no back navigation).
+ * - Smooth auto-scroll & Framer Motion transitions.
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -176,40 +175,49 @@ export default function QuizPage() {
     }
   }
 
+  // Progress percentage
+  const progressPct = Math.min(((questionIndex - 1) / totalQuestions) * 100, 100)
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-5 md:p-6">
-      <div className="w-full max-w-xl flex flex-col h-[calc(100vh-5.5rem)] max-h-[860px] bg-ink-900/90 border border-ink-700/80 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
+    <div className="flex-1 flex flex-col items-center justify-start p-3 sm:p-5 md:p-6 w-full max-w-2xl mx-auto">
+      <div className="w-full flex flex-col h-[calc(100vh-5.5rem)] max-h-[860px] bg-ink-900/90 border border-ink-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
         {/* ── Quiz Thread Header (Progress & Meta) ────────────────────────── */}
-        <div className="p-3.5 sm:p-4 border-b border-ink-700/80 bg-ink-900 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Pulsing session indicator */}
-            <div className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-accent" />
+        <div className="p-4 border-b border-ink-800 bg-ink-950/60 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
+              </span>
+              <div>
+                <h1 className="font-display text-base sm:text-lg font-bold text-ink-100 flex items-center gap-2">
+                  Adaptive Quiz Session
+                </h1>
+              </div>
             </div>
-            <div>
-              <h1 className="font-display text-lg font-bold text-ink-100 flex items-center gap-2">
-                Quiz Session
-              </h1>
-              <p className="text-[11px] font-mono text-ink-400">
-                Single-Attempt • No Going Back
-              </p>
+
+            {/* Question Counter Pill */}
+            <div className="flex items-center gap-1.5 bg-ink-900 px-3 py-1 rounded-full border border-ink-800 shadow-sm">
+              <span className="text-[11px] font-mono text-ink-400">Q</span>
+              <span className="text-xs font-mono font-bold text-accent">
+                {questionIndex}
+              </span>
+              <span className="text-[11px] text-ink-600">/</span>
+              <span className="text-[11px] font-mono text-ink-400">{totalQuestions}</span>
             </div>
           </div>
 
-          {/* Subtle Question Counter Badge */}
-          <div className="flex items-center gap-2 bg-ink-800/90 px-3 py-1.5 rounded-full border border-ink-700/60 shadow-inner-light">
-            <span className="text-xs font-medium text-ink-400">Question</span>
-            <span className="text-xs font-mono font-bold text-accent">
-              {questionIndex}
-            </span>
-            <span className="text-xs text-ink-600">/</span>
-            <span className="text-xs font-mono text-ink-400">{totalQuestions}</span>
+          {/* Micro Linear Progress Bar */}
+          <div className="w-full bg-ink-800 h-1 rounded-full overflow-hidden">
+            <div
+              className="bg-accent h-full rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
         </div>
 
         {/* ── Chat Thread Stream ────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {isLoading ? (
             <div className="space-y-4">
               <div className="flex items-start gap-3 max-w-[85%]">
@@ -241,25 +249,25 @@ export default function QuizPage() {
                 {messages.map((msg) => (
                   <motion.div
                     key={msg.id}
-                    initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
                     className={`flex flex-col ${
                       msg.type === 'outgoing_answer' ? 'items-end' : 'items-start'
                     }`}
                   >
                     {msg.type === 'incoming_question' ? (
                       /* Incoming Question Bubble (Left) */
-                      <div className="flex items-start gap-2.5 max-w-[92%] sm:max-w-[85%]">
-                        <div className="h-7 w-7 rounded-full bg-accent/20 text-accent border border-accent/40 flex items-center justify-center text-xs font-bold shrink-0 mt-1">
+                      <div className="flex items-start gap-2.5 max-w-[92%] sm:max-w-[88%]">
+                        <div className="h-7 w-7 rounded-xl bg-accent/15 text-accent border border-accent/30 flex items-center justify-center text-xs font-mono font-bold shrink-0 mt-0.5 shadow-sm">
                           Q{msg.questionIndex}
                         </div>
                         <div className="bubble-in">
                           <p className="text-sm sm:text-base leading-relaxed text-ink-100 font-sans font-medium">
                             {msg.text}
                           </p>
-                          <div className="flex items-center justify-between gap-4 mt-2 text-[10px] text-ink-400 font-mono">
-                            <span>Adaptive Question</span>
+                          <div className="flex items-center justify-between gap-4 mt-2.5 text-[10px] text-ink-400 font-mono pt-1.5 border-t border-ink-700/40">
+                            <span>Adaptive Question #{msg.questionIndex}</span>
                             <span>{msg.timestamp}</span>
                           </div>
                         </div>
@@ -275,15 +283,15 @@ export default function QuizPage() {
                         {/* Concise Correctness Pill Tag */}
                         <div className="flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold">
                           {msg.isCorrect ? (
-                            <span className="text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                            <span className="text-emerald-400 flex items-center gap-1 bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                               ✓ Correct (+1)
                             </span>
                           ) : (
-                            <span className="text-rose-400 flex items-center gap-1 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/30">
+                            <span className="text-rose-400 flex items-center gap-1 bg-rose-500/15 px-2.5 py-0.5 rounded-full border border-rose-500/30">
                               ✕ Incorrect • Correct: {msg.correctOption}
                             </span>
                           )}
-                          <span className="text-[10px] text-ink-400">{msg.timestamp}</span>
+                          <span className="text-[10px] text-ink-400 ml-1">{msg.timestamp}</span>
                         </div>
                       </div>
                     )}
@@ -294,7 +302,7 @@ export default function QuizPage() {
               {/* Submitting / Advancing indicator */}
               {isSubmitting && (
                 <motion.div
-                  initial={{ opacity: 0, y: 6 }}
+                  initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-2 text-xs text-ink-400 ml-10 italic"
                 >
@@ -303,7 +311,7 @@ export default function QuizPage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:0.2s]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:0.4s]" />
                   </div>
-                  <span>Recording attempt & evaluating...</span>
+                  <span>Evaluating and preparing next topic...</span>
                 </motion.div>
               )}
 
@@ -314,13 +322,13 @@ export default function QuizPage() {
 
         {/* ── Active Question Interactive Options (Bottom Tray) ──────────── */}
         {currentQuestion && !isLoading && !errorMessage && (
-          <div className="p-3.5 sm:p-4 bg-ink-950/80 border-t border-ink-700/80 backdrop-blur-md">
-            <div className="mb-2 flex items-center justify-between text-xs text-ink-400">
-              <span className="font-semibold uppercase tracking-wider text-[10px] text-ink-400">
-                Choose an option:
+          <div className="p-4 bg-ink-950/90 border-t border-ink-800 backdrop-blur-md">
+            <div className="mb-2.5 flex items-center justify-between text-xs text-ink-400">
+              <span className="font-semibold uppercase tracking-wider text-[10px] font-mono text-ink-400">
+                Select your response:
               </span>
               <span className="text-[10px] font-mono text-ink-400">
-                Tap to submit
+                Single attempt • Auto-evaluates
               </span>
             </div>
 
@@ -332,10 +340,10 @@ export default function QuizPage() {
                     key={option.key}
                     onClick={() => handleSelectOption(option)}
                     disabled={isSubmitting}
-                    className={`flex items-start gap-3 p-3 rounded-xl text-left text-xs sm:text-sm font-medium transition-all duration-150 border ${
+                    className={`flex items-start gap-3 p-3.5 rounded-xl text-left text-xs sm:text-sm font-medium transition-all duration-150 border ${
                       isPicked
                         ? 'bg-accent text-ink-950 border-accent font-bold shadow-glow scale-[0.98]'
-                        : 'bg-ink-800/90 text-ink-100 border-ink-700/80 hover:border-accent/60 hover:bg-ink-750 active:scale-[0.98]'
+                        : 'bg-ink-850/80 text-ink-100 border-ink-800 hover:border-accent/60 hover:bg-ink-800 active:scale-[0.98]'
                     } ${isSubmitting && !isPicked ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     <span
