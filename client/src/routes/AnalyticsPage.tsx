@@ -506,62 +506,70 @@ export default function AnalyticsPage() {
           className="space-y-4"
         >
           {/* Table / Sort Control Header */}
-          <div className="p-4 sm:p-5 bg-ink-900/90 rounded-2xl border border-ink-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <h2 className="font-display text-base sm:text-lg font-bold text-ink-100">
-                Question Difficulty Ranking
-              </h2>
-              <p className="text-xs text-ink-400">
-                Ranked by computed cognitive failure rate & student response latency
-              </p>
+          <div className="p-4 sm:p-5 bg-ink-900/90 rounded-2xl border border-ink-800 shadow-sm space-y-4">
+            {/* Title & Count Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-ink-800/80">
+              <div className="space-y-0.5">
+                <h2 className="font-display text-base sm:text-lg font-bold text-ink-100">
+                  Question Difficulty Ranking
+                </h2>
+                <p className="text-xs text-ink-400">
+                  Ranked by computed cognitive failure rate & student response latency
+                </p>
+              </div>
+              <span className="text-xs font-mono text-ink-400 self-start sm:self-auto">
+                {difficultyData.length} Questions Ranked
+              </span>
             </div>
 
-            {/* Single-Row Segmented Sort Control */}
-            <div className="flex items-center gap-1 bg-ink-950 p-1 rounded-xl border border-ink-800 font-mono text-xs self-start md:self-auto overflow-x-auto max-w-full">
-              <span className="text-ink-400 text-[10px] uppercase font-bold px-2 shrink-0">Sort:</span>
-              <button
-                onClick={() => handleDifficultySort('difficulty_score')}
-                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
-                  difficultySortField === 'difficulty_score'
-                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
-                    : 'text-ink-300 hover:text-white'
-                }`}
-              >
-                Difficulty {difficultySortField === 'difficulty_score' && (difficultySortAsc ? '↑' : '↓')}
-              </button>
+            {/* Dedicated Sort Control Row (Below Text) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 font-mono text-xs">
+              <span className="text-ink-400 text-xs font-semibold shrink-0">Sort by:</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
+                <button
+                  onClick={() => handleDifficultySort('difficulty_score')}
+                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all ${
+                    difficultySortField === 'difficulty_score'
+                      ? 'bg-accent text-ink-950 border-accent font-bold shadow-sm'
+                      : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white hover:border-ink-700'
+                  }`}
+                >
+                  Difficulty {difficultySortField === 'difficulty_score' && (difficultySortAsc ? '↑' : '↓')}
+                </button>
 
-              <button
-                onClick={() => handleDifficultySort('accuracy_pct')}
-                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
-                  difficultySortField === 'accuracy_pct'
-                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
-                    : 'text-ink-300 hover:text-white'
-                }`}
-              >
-                Accuracy {difficultySortField === 'accuracy_pct' && (difficultySortAsc ? '↑' : '↓')}
-              </button>
+                <button
+                  onClick={() => handleDifficultySort('accuracy_pct')}
+                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all ${
+                    difficultySortField === 'accuracy_pct'
+                      ? 'bg-accent text-ink-950 border-accent font-bold shadow-sm'
+                      : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white hover:border-ink-700'
+                  }`}
+                >
+                  Accuracy {difficultySortField === 'accuracy_pct' && (difficultySortAsc ? '↑' : '↓')}
+                </button>
 
-              <button
-                onClick={() => handleDifficultySort('avg_response_time_ms')}
-                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
-                  difficultySortField === 'avg_response_time_ms'
-                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
-                    : 'text-ink-300 hover:text-white'
-                }`}
-              >
-                Avg Time {difficultySortField === 'avg_response_time_ms' && (difficultySortAsc ? '↑' : '↓')}
-              </button>
+                <button
+                  onClick={() => handleDifficultySort('avg_response_time_ms')}
+                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all ${
+                    difficultySortField === 'avg_response_time_ms'
+                      ? 'bg-accent text-ink-950 border-accent font-bold shadow-sm'
+                      : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white hover:border-ink-700'
+                  }`}
+                >
+                  Avg Time {difficultySortField === 'avg_response_time_ms' && (difficultySortAsc ? '↑' : '↓')}
+                </button>
 
-              <button
-                onClick={() => handleDifficultySort('total_attempts')}
-                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 ${
-                  difficultySortField === 'total_attempts'
-                    ? 'bg-accent text-ink-950 font-bold shadow-sm'
-                    : 'text-ink-300 hover:text-white'
-                }`}
-              >
-                Attempts {difficultySortField === 'total_attempts' && (difficultySortAsc ? '↑' : '↓')}
-              </button>
+                <button
+                  onClick={() => handleDifficultySort('total_attempts')}
+                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all ${
+                    difficultySortField === 'total_attempts'
+                      ? 'bg-accent text-ink-950 border-accent font-bold shadow-sm'
+                      : 'bg-ink-950 text-ink-300 border-ink-800 hover:text-white hover:border-ink-700'
+                  }`}
+                >
+                  Attempts {difficultySortField === 'total_attempts' && (difficultySortAsc ? '↑' : '↓')}
+                </button>
+              </div>
             </div>
           </div>
 
