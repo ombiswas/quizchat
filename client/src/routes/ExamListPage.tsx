@@ -26,7 +26,7 @@ function getExamMeta(name: string): { icon: string; subtitle: string; tag: strin
   if (lower.includes('jee')) {
     return {
       icon: '📐',
-      subtitle: 'Engineering Entrance • Physics, Chemistry & Math',
+      subtitle: 'Engineering Entrance (Physics, Chemistry & Math)',
       tag: 'Engineering Track',
       gradient: 'from-cyan-500/10 to-transparent border-cyan-500/30',
     }
@@ -34,7 +34,7 @@ function getExamMeta(name: string): { icon: string; subtitle: string; tag: strin
   if (lower.includes('neet')) {
     return {
       icon: '🧬',
-      subtitle: 'Medical Admissions • Biology, Botany & Physiology',
+      subtitle: 'Medical Admissions (Biology, Botany & Physiology)',
       tag: 'Medical Track',
       gradient: 'from-emerald-500/10 to-transparent border-emerald-500/30',
     }
@@ -42,7 +42,7 @@ function getExamMeta(name: string): { icon: string; subtitle: string; tag: strin
   if (lower.includes('upsc')) {
     return {
       icon: '🏛️',
-      subtitle: 'Civil Services • Polity, History, Economy & Geography',
+      subtitle: 'Civil Services (Polity, History, Economy & Geography)',
       tag: 'Civil Services Track',
       gradient: 'from-amber-500/10 to-transparent border-amber-500/30',
     }
@@ -90,7 +90,6 @@ export default function ExamListPage() {
       {/* ── Header Breadcrumb & Title ──────────────────────────────────────── */}
       <div className="space-y-1 pb-4 border-b border-ink-800/80">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-accent" />
           <span className="font-mono text-[11px] uppercase tracking-wider text-accent font-semibold">
             Curriculum Navigator
           </span>

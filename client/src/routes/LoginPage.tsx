@@ -104,7 +104,6 @@ export default function LoginPage() {
       {/* ── Brand & Welcome Banner ─────────────────────────────────────────── */}
       <div className="space-y-1 pb-4 border-b border-ink-800/80">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
           <span className="font-mono text-[11px] uppercase tracking-wider text-accent font-semibold">
             Adaptive Cognitive Quiz Assessment
           </span>
@@ -270,8 +269,7 @@ export default function LoginPage() {
                           <p className="font-sans font-semibold text-xs sm:text-sm text-ink-100 truncate group-hover:text-white transition-colors">
                             {userItem.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          <div className="mt-0.5">
                             <span className="font-mono text-[10px] text-ink-400 truncate">
                               ID: {userItem.id.slice(-6)}
                             </span>

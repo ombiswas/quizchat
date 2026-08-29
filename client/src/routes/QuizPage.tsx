@@ -187,17 +187,16 @@ export default function QuizPage() {
         {/* ── Quiz Thread Header (Progress & Meta) ────────────────────────── */}
         <div className="p-4 sm:p-5 border-b border-ink-800 bg-ink-950/60 flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent" />
+            <div className="flex items-center gap-3">
+              <span className="px-2 py-0.5 rounded-md bg-accent/15 border border-accent/30 text-accent font-mono text-[10px] uppercase font-bold tracking-wider">
+                Active
               </span>
               <div>
                 <h1 className="font-display text-base sm:text-lg font-bold text-ink-100 flex items-center gap-2">
                   Adaptive Quiz Session
                 </h1>
                 <p className="text-[11px] font-mono text-ink-400">
-                  Single-Attempt • Strictly Forward Progression
+                  Single Attempt / Strictly Forward Progression
                 </p>
               </div>
             </div>
@@ -294,7 +293,7 @@ export default function QuizPage() {
                             </span>
                           ) : (
                             <span className="text-rose-400 flex items-center gap-1 bg-rose-500/15 px-2.5 py-0.5 rounded-full border border-rose-500/30">
-                              ✕ Incorrect • Correct: {msg.correctOption}
+                              ✕ Incorrect [Expected: {msg.correctOption}]
                             </span>
                           )}
                           <span className="text-[10px] text-ink-400 ml-1">{msg.timestamp}</span>
@@ -334,7 +333,7 @@ export default function QuizPage() {
                 Select your response:
               </span>
               <span className="text-[10px] text-ink-400">
-                Single attempt • Auto-evaluates
+                Single attempt / Auto-evaluates
               </span>
             </div>
 

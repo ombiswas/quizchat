@@ -135,7 +135,6 @@ export default function AnalyticsPage() {
       {/* ── Page Header ───────────────────────────────────────────────── */}
       <div className="space-y-1.5 pb-2">
         <div className="flex items-center gap-2 text-xs font-mono text-ink-400">
-          <span className="h-2 w-2 rounded-full bg-accent" />
           <span className="text-accent font-semibold uppercase tracking-wider">
             Cognitive Diagnostics
           </span>
@@ -613,7 +612,7 @@ export default function AnalyticsPage() {
 
                       {/* Difficulty Status Badge */}
                       <div
-                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold font-mono ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold font-mono ${
                           item.difficulty_score >= 0.65
                             ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                             : item.difficulty_score >= 0.40
@@ -621,17 +620,8 @@ export default function AnalyticsPage() {
                             : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                         }`}
                       >
-                        <span
-                          className={`h-2 w-2 rounded-full shrink-0 ${
-                            item.difficulty_score >= 0.65
-                              ? 'bg-rose-400'
-                              : item.difficulty_score >= 0.40
-                              ? 'bg-amber-400'
-                              : 'bg-cyan-400'
-                          }`}
-                        />
                         <span>Score: {item.difficulty_score.toFixed(2)}</span>
-                        <span className="text-ink-400 font-normal">•</span>
+                        <span className="text-ink-400 font-normal">/</span>
                         <span>
                           {item.difficulty_score >= 0.65 ? 'Hard Tier' : item.difficulty_score >= 0.40 ? 'Moderate Tier' : 'Easy Tier'}
                         </span>

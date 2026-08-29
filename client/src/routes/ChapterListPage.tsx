@@ -256,8 +256,7 @@ export default function ChapterListPage() {
                           <p className="font-sans font-semibold text-xs sm:text-sm text-ink-100 truncate group-hover:text-white transition-colors">
                             {chapter.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
+                          <div className="mt-0.5">
                             <span className="font-mono text-[10px] text-ink-400">
                               15 Adaptive Questions
                             </span>

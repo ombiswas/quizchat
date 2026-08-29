@@ -238,7 +238,7 @@ export default function ResultPage() {
                     <span className="font-display text-lg text-ink-400 font-normal">/ {totalQuestions}</span>
                   </div>
                   <span className="text-xs text-ink-400 mt-1 font-mono">
-                    {correctCount} Correct • {incorrectCount} Missed
+                    {correctCount} Correct / {incorrectCount} Missed
                   </span>
                 </div>
               </div>
@@ -401,17 +401,12 @@ export default function ResultPage() {
                             Question {String(item.question_index + 1).padStart(2, '0')}
                           </span>
                           <span
-                            className={`inline-flex items-center gap-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-lg border ${
+                            className={`inline-flex items-center text-xs font-mono font-semibold px-2.5 py-1 rounded-lg border ${
                               item.is_correct
                                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                                 : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                             }`}
                           >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                item.is_correct ? 'bg-emerald-400' : 'bg-rose-400'
-                              }`}
-                            />
                             <span>{item.is_correct ? 'Correct' : 'Missed'}</span>
                           </span>
                         </div>
