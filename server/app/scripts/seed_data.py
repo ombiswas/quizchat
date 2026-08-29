@@ -6,10 +6,11 @@ Usage:
 
 Populates MongoDB with:
   - 3 Exams (JEE Main, NEET UG, UPSC CSE)
-  - ~10 Subjects distributed across exams
-  - ~30 Chapters distributed across subjects
+  - 11 Subjects distributed across exams
+  - 30 Chapters distributed across subjects
   - 500 Questions with 4 options and single correct_option
-  - 50 Users with realistic Faker names
+  - 50 Users with realistic Indian names
+  - ~50 Completed Quiz sessions and ~750 Historical Question Attempts for rich analytics
 
 Reproducibility:
     Uses a fixed random seed (42) so all generated ObjectIds and text remain
@@ -31,7 +32,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.core.config import settings
 from app.core.indexes import create_indexes
-from app.models import Chapter, Exam, Option, Question, User
+from app.models import Chapter, Exam, Option, Question, User, Quiz, QuestionAttempt
 
 logging.basicConfig(
     level=logging.INFO,
@@ -182,6 +183,8 @@ def seed_generator(
     list[dict],  # Subject docs
     list[Chapter],
     list[Question],
+    list[Quiz],
+    list[QuestionAttempt],
 ]:
     """
     Generate all deterministic entities in memory.
@@ -238,19 +241,18 @@ def seed_generator(
 
     # 3. Generate Questions distributed across chapters
     questions: list[Question] = []
+    questions_by_chapter: dict[str, list[Question]] = {}
     total_chapters = len(chapters)
     base_per_chapter = target_questions // total_chapters
     remainder = target_questions % total_chapters
 
     for idx, chapter in enumerate(chapters):
-        # Distribute questions evenly, absorbing any remainder
         count_for_this_chapter = base_per_chapter + (1 if idx < remainder else 0)
-
-        # Look up subject name for realistic template filling
         subject_name = next(
             s["name"] for s in subjects if s["_id"] == chapter.subject_id
         )
 
+        chapter_questions: list[Question] = []
         for _ in range(count_for_this_chapter):
             template = random.choice(QUESTION_TEMPLATES)
             concept = fake.catch_phrase().lower()
@@ -297,8 +299,83 @@ def seed_generator(
                 created_at=q_created_at,
             )
             questions.append(question)
+            chapter_questions.append(question)
 
-    return users, exams, subjects, chapters, questions
+        questions_by_chapter[str(chapter.id)] = chapter_questions
+
+    # 4. Generate Historical Completed Quizzes & Question Attempts
+    quizzes: list[Quiz] = []
+    attempts: list[QuestionAttempt] = []
+
+    # Generate 1 to 2 completed quizzes for ~35 users
+    for user in users[:35]:
+        num_quizzes_for_user = random.randint(1, 2)
+        for _ in range(num_quizzes_for_user):
+            chapter = random.choice(chapters)
+            avail_q = questions_by_chapter.get(str(chapter.id), [])
+            if len(avail_q) < 10:
+                continue
+
+            sampled_questions = random.sample(avail_q, min(15, len(avail_q)))
+            quiz_id = ObjectId()
+            quiz_start_time = now - timedelta(days=random.randint(1, 30), minutes=random.randint(0, 700))
+            running_time = quiz_start_time
+            score = 0
+
+            # Base user capability (accuracy baseline 40% - 90%)
+            user_skill = random.uniform(0.40, 0.90)
+
+            for q_idx, q in enumerate(sampled_questions):
+                # Pacing latency with slight fatigue slowdown (3s - 12s)
+                duration_ms = int(random.gauss(4500 + q_idx * 150, 1200))
+                duration_ms = max(1800, min(18000, duration_ms))
+
+                # Accuracy with slight fatigue drop-off
+                is_correct = random.random() < max(0.25, user_skill - (q_idx * 0.015))
+                if is_correct:
+                    selected_opt = q.correct_option
+                    score += 1
+                else:
+                    distractors = [k for k in ["A", "B", "C", "D"] if k != q.correct_option]
+                    selected_opt = random.choice(distractors)
+
+                shown_at = running_time
+                running_time = shown_at + timedelta(milliseconds=duration_ms)
+                submitted_at = running_time
+
+                attempt = QuestionAttempt(
+                    _id=ObjectId(),
+                    user_id=user.id,
+                    quiz_id=quiz_id,
+                    question_id=q.id,
+                    exam_id=chapter.exam_id,
+                    subject_id=chapter.subject_id,
+                    chapter_id=chapter.id,
+                    question_index_in_quiz=q_idx,
+                    question_shown_at=shown_at,
+                    answer_submitted_at=submitted_at,
+                    response_duration_ms=duration_ms,
+                    selected_option=selected_opt,
+                    is_correct=is_correct,
+                )
+                attempts.append(attempt)
+
+            quiz = Quiz(
+                _id=quiz_id,
+                user_id=user.id,
+                exam_id=chapter.exam_id,
+                subject_id=chapter.subject_id,
+                chapter_id=chapter.id,
+                question_ids=[q.id for q in sampled_questions],
+                status="completed",
+                current_index=len(sampled_questions),
+                score=score,
+                started_at=quiz_start_time,
+                completed_at=running_time,
+            )
+            quizzes.append(quiz)
+
+    return users, exams, subjects, chapters, questions, quizzes, attempts
 
 
 async def wipe_database(db: AsyncIOMotorDatabase) -> None:
@@ -337,6 +414,8 @@ async def seed_database(force: bool = False) -> None:
     # Seed RNGs for determinism
     random.seed(RANDOM_SEED)
     Faker.seed(RANDOM_SEED)
+    fake = Faker("en_IN")
+
     logger.info("Connecting to MongoDB at '%s'...", settings.mongo_uri)
     kwargs = {}
     uri_lower = settings.mongo_uri.lower()
@@ -352,7 +431,7 @@ async def seed_database(force: bool = False) -> None:
 
         # 2. Generate entities
         logger.info("Generating dataset with seed=%d...", RANDOM_SEED)
-        users, exams, subjects, chapters, questions = seed_generator(
+        users, exams, subjects, chapters, questions, quizzes, attempts = seed_generator(
             fake=fake,
             num_users=settings.seed_num_users,
             target_questions=settings.seed_num_questions,
@@ -379,6 +458,14 @@ async def seed_database(force: bool = False) -> None:
         if questions:
             await db.questions.insert_many([q.to_mongo() for q in questions])
 
+        logger.info("Inserting %d historical quiz sessions...", len(quizzes))
+        if quizzes:
+            await db.quizzes.insert_many([qz.to_mongo() for qz in quizzes])
+
+        logger.info("Inserting %d historical question attempts...", len(attempts))
+        if attempts:
+            await db.question_attempts.insert_many([att.to_mongo() for att in attempts])
+
         # 4. Create and verify indexes
         await create_indexes(db)
 
@@ -391,20 +478,20 @@ async def seed_database(force: bool = False) -> None:
         quiz_count = await db.quizzes.count_documents({})
         qa_count = await db.question_attempts.count_documents({})
 
-        print("\n" + "=" * 64)
-        print(f" QuizChat Database Seeding Summary (Random Seed: {RANDOM_SEED})")
-        print("=" * 64)
-        print(f" {'Collection':<25} | {'Count':<10} | {'Status'}")
-        print("-" * 64)
-        print(f" {'users':<25} | {user_count:<10} | Seeded")
-        print(f" {'exams':<25} | {exam_count:<10} | Seeded")
-        print(f" {'subjects':<25} | {subject_count:<10} | Seeded")
-        print(f" {'chapters':<25} | {chapter_count:<10} | Seeded")
-        print(f" {'questions':<25} | {question_count:<10} | Seeded")
-        print(f" {'quizzes':<25} | {quiz_count:<10} | Generated via usage")
-        print(f" {'question_attempts':<25} | {qa_count:<10} | Generated via usage")
-        print("=" * 64)
-        print(" Database seeding completed successfully!\n")
+        print("\n" + "=" * 68)
+        print(f"  QuizChat Database Seeding Summary (Random Seed: {RANDOM_SEED})")
+        print("=" * 68)
+        print(f"  {'Collection':<25} | {'Count':<10} | {'Status'}")
+        print("-" * 68)
+        print(f"  {'users':<25} | {user_count:<10} | Seeded")
+        print(f"  {'exams':<25} | {exam_count:<10} | Seeded")
+        print(f"  {'subjects':<25} | {subject_count:<10} | Seeded")
+        print(f"  {'chapters':<25} | {chapter_count:<10} | Seeded")
+        print(f"  {'questions':<25} | {question_count:<10} | Seeded")
+        print(f"  {'quizzes':<25} | {quiz_count:<10} | Seeded (Historical)")
+        print(f"  {'question_attempts':<25} | {qa_count:<10} | Seeded (Historical)")
+        print("=" * 68)
+        print("  Database seeding completed successfully!\n")
 
     finally:
         client.close()
