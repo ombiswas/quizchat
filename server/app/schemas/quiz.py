@@ -94,9 +94,25 @@ class SubmitAnswerResponse(BaseModel):
     )
 
 
+class QuestionAttemptDetail(BaseModel):
+    """
+    Detailed attempt item in the completed quiz result breakdown.
+    """
+
+    question_id: str
+    question_index: int
+    question_text: str
+    selected_option: str
+    selected_option_text: str
+    correct_option: str
+    correct_option_text: str
+    is_correct: bool
+    response_duration_ms: int
+
+
 class QuizResultResponse(BaseModel):
     """
-    Final summary result for a completed quiz.
+    Final summary result for a completed quiz with optional question-by-question breakdown.
     """
 
     quiz_id: str
@@ -111,3 +127,7 @@ class QuizResultResponse(BaseModel):
     chapter_id: str
     chapter_name: str
     completed_at: str = Field(description="ISO formatted completion timestamp")
+    attempts: list[QuestionAttemptDetail] = Field(
+        default_factory=list,
+        description="Full question-by-question review of user attempts and correct answers",
+    )

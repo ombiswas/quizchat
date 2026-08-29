@@ -23,6 +23,7 @@ from app.repositories.quiz_repository import QuizRepository
 from app.repositories.subject_repository import SubjectRepository
 from app.schemas.quiz import (
     ClientQuestionResponse,
+    QuestionAttemptDetail,
     QuizResultResponse,
     QuizStartResponse,
     SubmitAnswerResponse,
@@ -388,6 +389,40 @@ class QuizService:
             else datetime.now(timezone.utc).isoformat()
         )
 
+        # 6. Fetch attempt history and questions for detailed answer review
+        attempt_models = await self.attempt_repo.get_by_quiz_id(quiz.id)
+        question_models = await self.question_repo.get_by_ids(quiz.question_ids)
+        questions_map = {str(q.id): q for q in question_models}
+
+        attempt_details: list[QuestionAttemptDetail] = []
+        for att in attempt_models:
+            q_id_str = str(att.question_id)
+            q = questions_map.get(q_id_str)
+            if not q:
+                continue
+
+            # Selected option text
+            sel_opt = next((o for o in q.options if o.key == att.selected_option), None)
+            sel_text = f"{att.selected_option}. {sel_opt.text}" if sel_opt else att.selected_option
+
+            # Correct option text
+            cor_opt = next((o for o in q.options if o.key == q.correct_option), None)
+            cor_text = f"{q.correct_option}. {cor_opt.text}" if cor_opt else q.correct_option
+
+            attempt_details.append(
+                QuestionAttemptDetail(
+                    question_id=q_id_str,
+                    question_index=att.question_index_in_quiz,
+                    question_text=q.text,
+                    selected_option=att.selected_option,
+                    selected_option_text=sel_text,
+                    correct_option=q.correct_option,
+                    correct_option_text=cor_text,
+                    is_correct=att.is_correct,
+                    response_duration_ms=att.response_duration_ms,
+                )
+            )
+
         return QuizResultResponse(
             quiz_id=str(quiz.id),
             score=quiz.score,
@@ -401,4 +436,5 @@ class QuizService:
             chapter_id=str(quiz.chapter_id),
             chapter_name=chapter_name,
             completed_at=completed_iso,
+            attempts=attempt_details,
         )

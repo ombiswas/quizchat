@@ -1,18 +1,31 @@
 /**
  * ResultPage component.
  *
- * Distinctive, animated quiz result screen.
+ * Distinctive, animated quiz result screen with comprehensive question review.
  * - Animated count-up of final score, accuracy %, and duration
  * - Score tier classification and curriculum context
+ * - Full question-by-question review with user selections, correct answers, and duration
  * - Action buttons to jump directly to personal analytics or take another quiz
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { apiClient } from '@/api/client'
 import { useSessionStore } from '@/store/sessionStore'
+
+interface QuestionAttemptDetail {
+  question_id: string
+  question_index: number
+  question_text: string
+  selected_option: string
+  selected_option_text: string
+  correct_option: string
+  correct_option_text: string
+  is_correct: boolean
+  response_duration_ms: number
+}
 
 interface QuizResultData {
   quiz_id: string
@@ -23,6 +36,7 @@ interface QuizResultData {
   exam_name: string
   subject_name: string
   chapter_name: string
+  attempts?: QuestionAttemptDetail[]
 }
 
 // ── Number count-up animation hook ───────────────────────────────────────────
@@ -73,6 +87,7 @@ export default function ResultPage() {
   const { quizId } = useParams<{ quizId: string }>()
   const navigate = useNavigate()
   const { user, isAuthenticated } = useSessionStore()
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'correct' | 'incorrect'>('all')
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -101,9 +116,20 @@ export default function ResultPage() {
     ? (result.total_time_taken_ms / Math.max(result.total_questions, 1) / 1000).toFixed(1)
     : '0.0'
 
+  // Filtered attempts
+  const attempts = result?.attempts ?? []
+  const filteredAttempts = useMemo(() => {
+    if (reviewFilter === 'correct') return attempts.filter((a) => a.is_correct)
+    if (reviewFilter === 'incorrect') return attempts.filter((a) => !a.is_correct)
+    return attempts
+  }, [attempts, reviewFilter])
+
+  const correctCount = useMemo(() => attempts.filter((a) => a.is_correct).length, [attempts])
+  const incorrectCount = useMemo(() => attempts.filter((a) => !a.is_correct).length, [attempts])
+
   return (
     <div className="flex-1 flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
-      <div className="w-full max-w-lg flex flex-col bg-ink-900/90 border border-ink-700/80 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
+      <div className="w-full max-w-2xl flex flex-col bg-ink-900/90 border border-ink-700/80 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl space-y-6">
         {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="p-4 sm:p-5 border-b border-ink-700/80 bg-ink-900 flex items-center justify-between">
           <div>
@@ -232,6 +258,133 @@ export default function ResultPage() {
                   </div>
                 </motion.div>
               </div>
+
+              {/* ────────────────────────────────────────────────────────── */}
+              {/* DETAILED QUESTION-BY-QUESTION REVIEW SECTION               */}
+              {/* ────────────────────────────────────────────────────────── */}
+              {attempts.length > 0 && (
+                <div className="pt-4 border-t border-ink-700/80 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="font-display text-lg font-bold text-ink-100 flex items-center gap-2">
+                        <span>Question Breakdown & Review</span>
+                        <span className="text-xs font-mono text-ink-400 font-normal">
+                          ({attempts.length} items)
+                        </span>
+                      </h2>
+                      <p className="text-xs text-ink-400 mt-0.5">
+                        Inspect correct and incorrect answer choices with response durations
+                      </p>
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="flex items-center bg-ink-950 p-1 rounded-xl border border-ink-700/80 self-start sm:self-auto shrink-0 text-xs">
+                      <button
+                        onClick={() => setReviewFilter('all')}
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                          reviewFilter === 'all'
+                            ? 'bg-accent text-ink-950 shadow-glow font-bold'
+                            : 'text-ink-400 hover:text-white'
+                        }`}
+                      >
+                        All ({attempts.length})
+                      </button>
+                      <button
+                        onClick={() => setReviewFilter('correct')}
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                          reviewFilter === 'correct'
+                            ? 'bg-emerald-500 text-ink-950 font-bold'
+                            : 'text-ink-400 hover:text-emerald-400'
+                        }`}
+                      >
+                        ✓ Correct ({correctCount})
+                      </button>
+                      <button
+                        onClick={() => setReviewFilter('incorrect')}
+                        className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                          reviewFilter === 'incorrect'
+                            ? 'bg-rose-500 text-white font-bold'
+                            : 'text-ink-400 hover:text-rose-400'
+                        }`}
+                      >
+                        ✕ Incorrect ({incorrectCount})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Questions List */}
+                  <div className="space-y-3">
+                    <AnimatePresence>
+                      {filteredAttempts.map((item, idx) => (
+                        <motion.div
+                          key={item.question_id + idx}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.98 }}
+                          transition={{ duration: 0.2 }}
+                          className={`p-4 rounded-xl border transition-all ${
+                            item.is_correct
+                              ? 'bg-ink-850/80 border-emerald-500/30'
+                              : 'bg-ink-850/80 border-rose-500/30'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                                Q{item.question_index + 1}
+                              </span>
+                              <span
+                                className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
+                                  item.is_correct
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                }`}
+                              >
+                                {item.is_correct ? '✓ Correct' : '✕ Incorrect'}
+                              </span>
+                            </div>
+
+                            <span className="text-[11px] font-mono text-ink-400">
+                              ⏱️ {(item.response_duration_ms / 1000).toFixed(1)}s
+                            </span>
+                          </div>
+
+                          <p className="text-xs sm:text-sm text-ink-100 font-medium leading-relaxed mb-3">
+                            {item.question_text}
+                          </p>
+
+                          {/* Options Breakdown Grid */}
+                          <div className="space-y-1.5 text-xs font-sans">
+                            {/* User selection */}
+                            <div
+                              className={`p-2.5 rounded-lg flex items-start gap-2 ${
+                                item.is_correct
+                                  ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
+                              }`}
+                            >
+                              <span className="font-mono font-bold shrink-0">Your Answer:</span>
+                              <span className="font-medium">{item.selected_option_text}</span>
+                            </div>
+
+                            {/* Correct option if user was incorrect */}
+                            {!item.is_correct && (
+                              <div className="p-2.5 rounded-lg flex items-start gap-2 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                                <span className="font-mono font-bold shrink-0 text-emerald-400">
+                                  Correct Answer:
+                                </span>
+                                <span className="font-medium text-emerald-200">
+                                  {item.correct_option_text}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
 
               {/* ── Action Buttons ───────────────────────────────────────── */}
               <div className="space-y-3 pt-2">
